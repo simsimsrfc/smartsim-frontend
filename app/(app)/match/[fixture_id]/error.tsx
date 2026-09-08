@@ -17,6 +17,15 @@ export default function MatchDetailError({ error, reset }: { error: Error & { di
         {error?.digest && (
           <p className="mt-2 font-mono text-xs text-[rgba(243,246,247,0.40)]">Digest : {error.digest}</p>
         )}
+        {error?.message && (
+          <details className="mt-3 rounded-lg border border-white/[0.08] bg-black/40 p-3 text-left">
+            <summary className="cursor-pointer text-xs font-bold text-[rgba(243,246,247,0.72)]">Détails techniques</summary>
+            <pre className="mt-2 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] text-[rgba(243,246,247,0.60)]">
+{error.message}
+{error.stack && "\n\n" + error.stack.split("\n").slice(0, 8).join("\n")}
+            </pre>
+          </details>
+        )}
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <button

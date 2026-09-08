@@ -62,7 +62,11 @@ export function MatchesInteractive({
   const [query, setQuery] = useState<string>("");
   const [page, setPage] = useState<number>(1);
 
-  const rawMatches = day === "today" ? today : tomorrow;
+  const rawMatches = (day === "today" ? today : tomorrow).filter((m) => {
+    const p = m.probabilities || {};
+    return (p.over_25 || 0) > 0 || (p.over_15 || 0) > 0 || (p.btts || 0) > 0
+      || Math.max(p.home_win || 0, p.draw || 0, p.away_win || 0) > 0.4;
+  });
 
   const leagues = useMemo(() => {
     const set = new Map<string, string>();
@@ -231,24 +235,27 @@ function SelectBox({
   onChange: (v: string) => void;
   options: Array<{ value: string; label: string }>;
 }) {
+  const current = options.find((o) => o.value === value)?.label ?? "";
   return (
-    <label className="relative flex h-[52px] min-w-[150px] items-center justify-between gap-3 rounded-[14px] border border-white/[0.08] bg-[rgba(7,16,24,0.72)] px-4">
-      <div className="flex flex-col">
+    <div className="relative flex h-[52px] min-w-[150px] items-center rounded-[14px] border border-white/[0.08] bg-[rgba(7,16,24,0.72)]">
+      <div className="pointer-events-none flex flex-1 flex-col px-4">
         <span className="text-[11px] font-medium text-[rgba(243,246,247,0.42)]">{label}</span>
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="mt-0.5 cursor-pointer appearance-none bg-transparent text-sm font-bold text-[#F3F6F7] focus:outline-none"
-        >
-          {options.map((o) => (
-            <option key={o.value} value={o.value} className="bg-[#07131c] text-[#F3F6F7]">
-              {o.label}
-            </option>
-          ))}
-        </select>
+        <span className="mt-0.5 truncate text-sm font-bold text-[#F3F6F7]">{current}</span>
       </div>
-      <ChevronDown size={15} className="pointer-events-none text-[rgba(243,246,247,0.58)]" />
-    </label>
+      <ChevronDown size={15} className="pointer-events-none mr-3 text-[rgba(243,246,247,0.58)]" />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="absolute inset-0 cursor-pointer appearance-none bg-transparent text-transparent focus:outline-none"
+        aria-label={label}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value} className="bg-[#07131c] text-[#F3F6F7]">
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 
