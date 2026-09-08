@@ -1,3 +1,5 @@
+"use client";
+
 type CountryFlagProps = {
   country?: string | null;
   league?: string | null;
