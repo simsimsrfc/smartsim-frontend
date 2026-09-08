@@ -180,12 +180,14 @@ export function MatchesInteractive({
 
       {/* Desktop */}
       <section className="hidden w-full max-w-full overflow-hidden rounded-[24px] border border-white/[0.08] bg-[rgba(7,16,24,0.82)] shadow-[0_18px_50px_rgba(0,0,0,0.26)] lg:block">
-        <div className="grid h-12 grid-cols-[minmax(150px,1.1fr)_72px_minmax(280px,1.6fr)_112px_86px_120px_52px] items-center gap-3 border-b border-white/[0.06] px-4 text-[11px] font-extrabold uppercase tracking-[0.10em] text-[rgba(243,246,247,0.48)]">
+        <div className="grid h-12 grid-cols-[minmax(140px,1fr)_64px_minmax(260px,1.5fr)_100px_74px_74px_74px_100px_52px] items-center gap-3 border-b border-white/[0.06] px-4 text-[11px] font-extrabold uppercase tracking-[0.10em] text-[rgba(243,246,247,0.48)]">
           <span>Ligue</span>
           <span>Heure</span>
           <span>Match</span>
-          <span>Résultat Sim</span>
-          <span>+2,5 buts</span>
+          <span>Résultat</span>
+          <span>+2,5</span>
+          <span>+1,5</span>
+          <span>BTTS</span>
           <span>Confiance</span>
           <span className="text-center">Actions</span>
         </div>
@@ -258,7 +260,7 @@ function MatchRow({ match }: { match: MatchSummary }) {
   const awayGoals = match.score?.away;
 
   return (
-    <div className="relative grid min-h-[82px] grid-cols-[minmax(150px,1.1fr)_72px_minmax(280px,1.6fr)_112px_86px_120px_52px] items-center gap-3 border-b border-white/[0.06] px-4 transition-colors last:border-b-0 hover:bg-[rgba(53,231,90,0.04)]">
+    <div className="relative grid min-h-[82px] grid-cols-[minmax(140px,1fr)_64px_minmax(260px,1.5fr)_100px_74px_74px_74px_100px_52px] items-center gap-3 border-b border-white/[0.06] px-4 transition-colors last:border-b-0 hover:bg-[rgba(53,231,90,0.04)]">
       <Link
         href={`/match/${match.fixture_id}?source=matches`}
         aria-label={`${match.home_team.name} contre ${match.away_team.name}`}
@@ -284,24 +286,21 @@ function MatchRow({ match }: { match: MatchSummary }) {
         <TeamMini name={match.away_team.name} logo={match.away_team.logo} align="left" />
       </div>
       {finished ? (
-        <div className="flex h-[46px] w-[104px] flex-col items-center justify-center rounded-xl border border-white/[0.10] bg-white/[0.04] text-center">
+        <div className="flex h-[46px] w-[92px] flex-col items-center justify-center rounded-xl border border-white/[0.10] bg-white/[0.04] text-center">
           <div className="text-[10px] font-bold uppercase leading-none text-[rgba(243,246,247,0.60)]">Terminé</div>
           <div className="mt-1 text-xs font-black leading-none text-[#F3F6F7]">
             {homeGoals ?? "-"}–{awayGoals ?? "-"}
           </div>
         </div>
       ) : (
-        <div className="flex h-[46px] w-[104px] flex-col items-center justify-center rounded-xl border border-[rgba(53,231,90,0.20)] bg-[rgba(53,231,90,0.09)] text-center">
+        <div className="flex h-[46px] w-[92px] flex-col items-center justify-center rounded-xl border border-[rgba(53,231,90,0.20)] bg-[rgba(53,231,90,0.09)] text-center">
           <div className="text-lg font-black leading-none text-[#35E75A]">{code}</div>
-          <div className="mt-1 max-w-[92px] truncate text-[10px] font-bold leading-none text-[#DFFFE8]">{label}</div>
+          <div className="mt-1 max-w-[84px] truncate text-[10px] font-bold leading-none text-[#DFFFE8]">{label}</div>
         </div>
       )}
-      <div className="flex h-[46px] w-[78px] flex-col items-center justify-center rounded-xl border border-[rgba(53,231,90,0.20)] bg-[rgba(53,231,90,0.09)] text-center">
-        <div className="text-lg font-black leading-none text-[#35E75A]">+2.5</div>
-        <div className="mt-1 text-xs font-black leading-none text-[#35E75A]">
-          {Math.round((over25DisplayProbability(match) || 0) * 100)}%
-        </div>
-      </div>
+      <MarketCell label="+2.5" value={over25DisplayProbability(match) || 0} />
+      <MarketCell label="+1.5" value={match.probabilities.over_15 || 0} />
+      <MarketCell label="BTTS" value={match.probabilities.btts || 0} />
       <div className="w-[104px]">
         <div className="mb-2 text-sm font-black leading-none text-[#35E75A]">
           {Math.round(Math.max(match.probabilities.home_win || 0, match.probabilities.draw || 0, match.probabilities.away_win || 0) * 100)}%
@@ -318,6 +317,20 @@ function MatchRow({ match }: { match: MatchSummary }) {
       <div className="relative z-10 flex justify-center">
         <FavoriteButton match={match} source="matches" tab="over25" analysisType="over25" />
       </div>
+    </div>
+  );
+}
+
+function MarketCell({ label, value }: { label: string; value: number }) {
+  const pct = Math.round((value || 0) * 100);
+  const tone = pct >= 65 ? "text-[#35E75A] border-[rgba(53,231,90,0.20)] bg-[rgba(53,231,90,0.09)]"
+    : pct >= 50 ? "text-[#D8AF3A] border-[rgba(216,175,58,0.20)] bg-[rgba(216,175,58,0.08)]"
+    : pct > 0 ? "text-[#E85B5B] border-[rgba(232,91,91,0.18)] bg-[rgba(232,91,91,0.07)]"
+    : "text-[rgba(243,246,247,0.45)] border-white/[0.08] bg-white/[0.03]";
+  return (
+    <div className={`flex h-[46px] w-[66px] flex-col items-center justify-center rounded-xl border text-center ${tone}`}>
+      <div className="text-[10px] font-black leading-none opacity-90">{label}</div>
+      <div className="mt-1 text-xs font-black leading-none">{pct}%</div>
     </div>
   );
 }

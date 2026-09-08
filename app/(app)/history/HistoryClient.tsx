@@ -182,20 +182,45 @@ function mapResult(item: HistoryApiItem): ResultItem {
   };
 }
 
+type PeriodKey = "7d" | "30d" | "all";
+const PERIOD_OPTIONS: Array<{ key: PeriodKey; label: string; days: number | null }> = [
+  { key: "7d", label: "7 derniers jours", days: 7 },
+  { key: "30d", label: "30 derniers jours", days: 30 },
+  { key: "all", label: "Tout l'historique", days: null },
+];
+
 export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
   const [activeTab, setActiveTab] = useState<HistoryTab>("over25");
   const [search, setSearch] = useState("");
+  const [period, setPeriod] = useState<PeriodKey>("7d");
+  const [periodOpen, setPeriodOpen] = useState(false);
+
+  const filteredItems = useMemo(() => {
+    const now = new Date();
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    const opt = PERIOD_OPTIONS.find((o) => o.key === period)!;
+    const minDate = opt.days == null ? null : new Date(now.getTime() - opt.days * 86400_000);
+    return items.filter((it) => {
+      if (!it.date) return false;
+      const d = new Date(it.date);
+      if (Number.isNaN(d.getTime())) return false;
+      if (d.getTime() > todayEnd.getTime()) return false; // exclude future matches
+      if (minDate && d.getTime() < minDate.getTime()) return false;
+      return true;
+    });
+  }, [items, period]);
+
   const historyData = useMemo(() => ({
-    over25: items.filter((item) => item.type === "smart-over25").map(mapOver25),
-    smartResult: items.filter((item) => item.type === "smart-result").map((item) => ({
+    over25: filteredItems.filter((item) => item.type === "smart-over25").map(mapOver25),
+    smartResult: filteredItems.filter((item) => item.type === "smart-result").map((item) => ({
       ...mapBase(item),
       kind: "smartResult" as const,
       selection: (item.selection.pick || "1") as ResultCode,
       selectionLabel: item.selection.label || "Avis résultat",
       confidence: percent(item.selection.probability),
     })),
-    result: items.filter((item) => item.type === "result").map(mapResult),
-  }), [items]);
+    result: filteredItems.filter((item) => item.type === "result").map(mapResult),
+  }), [filteredItems]);
 
   const rows = useMemo(() => {
     const source =
@@ -227,11 +252,33 @@ export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
             Retrouvez l'historique complet de vos sélections et avis passés.
           </p>
         </div>
-        <button className="inline-flex h-12 items-center gap-3 rounded-[14px] border border-[rgba(53,231,90,0.22)] bg-[rgba(7,16,24,0.74)] px-4 text-sm font-bold text-[#F3F6F7]">
-          <CalendarDays size={17} className="text-[rgba(243,246,247,0.72)]" />
-          7 derniers jours
-          <ChevronDown size={16} className="text-[rgba(243,246,247,0.58)]" />
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setPeriodOpen((v) => !v)}
+            className="inline-flex h-12 items-center gap-3 rounded-[14px] border border-[rgba(53,231,90,0.22)] bg-[rgba(7,16,24,0.74)] px-4 text-sm font-bold text-[#F3F6F7]"
+          >
+            <CalendarDays size={17} className="text-[rgba(243,246,247,0.72)]" />
+            {PERIOD_OPTIONS.find((o) => o.key === period)?.label}
+            <ChevronDown size={16} className="text-[rgba(243,246,247,0.58)]" />
+          </button>
+          {periodOpen && (
+            <div className="absolute right-0 top-full z-20 mt-2 min-w-[200px] rounded-[12px] border border-white/[0.08] bg-[#07131c] p-1 shadow-lg">
+              {PERIOD_OPTIONS.map((o) => (
+                <button
+                  key={o.key}
+                  type="button"
+                  onClick={() => { setPeriod(o.key); setPeriodOpen(false); }}
+                  className={`block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                    o.key === period ? "bg-[rgba(53,231,90,0.14)] text-[#35E75A]" : "text-[#F3F6F7] hover:bg-white/[0.05]"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

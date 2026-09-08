@@ -32,7 +32,7 @@ export function MatchAnalysisPage({
 
   return (
     <div className="mx-auto flex w-full max-w-[1460px] flex-col gap-3 overflow-x-hidden sm:gap-4">
-      <BackButton />
+      <BackButton source={source} />
       <MatchHero match={match} source={source} activeTab={activeView} />
       <MatchAnalysisTabs fixtureId={fixtureId} source={source} tabs={tabs} activeTab={activeView} />
       {/* Phase 2 — Smart summary (fallback-safe, ne rend rien si insights absent) */}
@@ -52,14 +52,22 @@ export function MatchAnalysisPage({
   );
 }
 
-function BackButton() {
+function BackButton({ source }: { source: MatchAnalysisSource }) {
+  const dest =
+    source === "smart-over25" || source === "smart-result"
+      ? { href: "/smart-sim", label: "Retour à Smart Sim" }
+      : source === "favorites"
+        ? { href: "/favorites", label: "Retour aux favoris" }
+        : source === "history"
+          ? { href: "/history", label: "Retour à l'historique" }
+          : { href: "/matches", label: "Retour aux matchs" };
   return (
     <Link
-      href="/matches"
+      href={dest.href}
       className="inline-flex w-fit items-center gap-2 text-sm font-bold text-[rgba(243,246,247,0.58)] transition-colors hover:text-[#F3F6F7]"
     >
       <ArrowLeft size={16} />
-      Retour aux matchs
+      {dest.label}
     </Link>
   );
 }
