@@ -62,11 +62,7 @@ export function MatchesInteractive({
   const [query, setQuery] = useState<string>("");
   const [page, setPage] = useState<number>(1);
 
-  const rawMatches = (day === "today" ? today : tomorrow).filter((m) => {
-    const p = m.probabilities || {};
-    return (p.over_25 || 0) > 0 || (p.over_15 || 0) > 0 || (p.btts || 0) > 0
-      || Math.max(p.home_win || 0, p.draw || 0, p.away_win || 0) > 0.4;
-  });
+  const rawMatches = day === "today" ? today : tomorrow;
 
   const leagues = useMemo(() => {
     const set = new Map<string, string>();
