@@ -55,6 +55,10 @@ export function MatchCard({
 }) {
   const { home_team, away_team, league, probabilities, is_smart_bet, predicted_winner, winner_proba } = match;
   const isGold = variant === "gold" || is_smart_bet;
+  const finishedStatuses = new Set(["FT", "AET", "PEN"]);
+  const isFinished = finishedStatuses.has(String(match.status?.code || "").toUpperCase());
+  const hg = match.score?.home;
+  const ag = match.score?.away;
 
   return (
     <Link
@@ -78,9 +82,20 @@ export function MatchCard({
         <div className="mb-6 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
           <TeamSide team={home_team} align="right" />
           <div className="flex flex-col items-center gap-1">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#D8AC2F]/25 bg-black/25 shadow-[0_8px_22px_rgba(216,172,47,0.10)]">
-              <span className="text-[10px] font-extrabold tracking-[0.15em] text-[#D8AC2F]">VS</span>
-            </div>
+            {isFinished && hg != null && ag != null ? (
+              <div className="flex h-12 min-w-[64px] items-center justify-center rounded-full border border-white/15 bg-black/40 px-3">
+                <span className="text-base font-black text-[#F3F6F7]">{hg}–{ag}</span>
+              </div>
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#D8AC2F]/25 bg-black/25 shadow-[0_8px_22px_rgba(216,172,47,0.10)]">
+                <span className="text-[10px] font-extrabold tracking-[0.15em] text-[#D8AC2F]">VS</span>
+              </div>
+            )}
+            {isFinished && (
+              <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.15em] text-[rgba(243,246,247,0.60)]">
+                Terminé
+              </span>
+            )}
           </div>
           <TeamSide team={away_team} align="left" />
         </div>
