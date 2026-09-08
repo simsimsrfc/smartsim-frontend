@@ -1,0 +1,172 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg-app: #03080A;
+  --bg-deep: #03080A;
+  --bg-elevated: #071117;
+  --brand: #35E75A;
+  --brand-soft: #4BF06B;
+  --gold: #F5C542;
+  --gold-deep: #D8AC2F;
+  --fg: #F3F6F7;
+  --fg-secondary: rgba(220,230,235,0.72);
+  --fg-muted: rgba(200,210,215,0.45);
+}
+
+html, body {
+  min-height: 100%;
+  background: #03080A;
+  color: var(--fg);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0;
+}
+
+/* ════════════════════════════════════════════════
+   AMBIANCE STADE DE NUIT — fond global cinématique
+   ════════════════════════════════════════════════ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 18% 6%, rgba(53,231,90,0.08), transparent 30%),
+    radial-gradient(circle at 82% 0%, rgba(90,140,180,0.08), transparent 28%),
+    linear-gradient(180deg, #03080A 0%, #050B0E 45%, #020506 100%);
+  pointer-events: none;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(108deg, transparent 0 31%, rgba(255,255,255,0.032) 41%, transparent 51%),
+    linear-gradient(72deg, transparent 0 48%, rgba(255,255,255,0.028) 58%, transparent 68%),
+    repeating-linear-gradient(90deg, transparent 0, transparent 120px, rgba(255,255,255,0.010) 121px, transparent 122px);
+  opacity: 0.32;
+  pointer-events: none;
+}
+
+/* ════════════════════════════════════════════════
+   SCROLLBAR
+   ════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(53, 231, 90, 0.35); }
+
+::selection { background: rgba(53, 231, 90, 0.30); color: #F3F7FA; }
+
+/* ════════════════════════════════════════════════
+   ANIMATIONS
+   ════════════════════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes pulseGreen {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(53, 231, 90, 0.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(53, 231, 90, 0); }
+}
+.pulse-green { animation: pulseGreen 2s ease-in-out infinite; }
+
+/* ════════════════════════════════════════════════
+   GLASS PRESETS — Tailwind shortcuts
+   ════════════════════════════════════════════════ */
+.glass-card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.018) 100%),
+    rgba(7, 19, 26, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 22px 70px -22px rgba(0, 0, 0, 0.82),
+    inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(53, 231, 90, 0.30);
+  box-shadow:
+    0 24px 60px -12px rgba(0, 0, 0, 0.65),
+    0 0 40px -8px rgba(53, 231, 90, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.premium-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 32px;
+  border: 1px solid rgba(130,170,150,0.16);
+  background:
+    radial-gradient(700px 260px at 12% 0%, rgba(53,231,90,0.06), transparent 62%),
+    linear-gradient(180deg, rgba(10,18,24,0.82), rgba(7,17,23,0.78));
+  box-shadow:
+    0 22px 70px -24px rgba(0,0,0,0.82),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+.stadium-lines {
+  background-image:
+    linear-gradient(90deg, transparent 0 49%, rgba(53,231,90,0.18) 50%, transparent 51%),
+    radial-gradient(ellipse 50% 28% at 50% 100%, transparent 58%, rgba(53,231,90,0.16) 59%, transparent 61%);
+}
+
+.matches-stadium {
+  position: relative;
+}
+
+.matches-stadium::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 6%, rgba(53,231,90,0.10), transparent 30%),
+    radial-gradient(circle at 82% 0%, rgba(90,140,180,0.10), transparent 28%),
+    linear-gradient(108deg, transparent 0 31%, rgba(255,255,255,0.035) 41%, transparent 51%),
+    linear-gradient(72deg, transparent 0 48%, rgba(255,255,255,0.035) 58%, transparent 68%);
+  opacity: 0.55;
+}
+
+/* Hero stade abstract */
+.hero-stadium {
+  position: relative;
+  overflow: hidden;
+}
+.hero-stadium::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(108deg, transparent 0 25%, rgba(220,240,255,0.055) 40%, transparent 56%),
+    linear-gradient(72deg, transparent 0 38%, rgba(220,240,255,0.045) 52%, transparent 68%),
+    radial-gradient(ellipse 1050px 390px at 50% 112%, rgba(53, 231, 90, 0.11), transparent 62%),
+    radial-gradient(620px 220px at 18% -8%, rgba(89, 240, 122, 0.10), transparent 72%),
+    radial-gradient(620px 220px at 84% -8%, rgba(80, 180, 210, 0.10), transparent 72%),
+    linear-gradient(180deg, rgba(7, 19, 26, 0.62) 0%, rgba(5, 11, 14, 0.96) 100%);
+  pointer-events: none;
+}
+.hero-stadium::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(3,7,10,0.28) 100%),
+    repeating-linear-gradient(90deg, transparent 0, transparent 92px, rgba(255,255,255,0.018) 92px, rgba(255,255,255,0.018) 93px),
+    radial-gradient(ellipse 820px 300px at 50% 56%, rgba(53, 231, 90, 0.08), transparent 70%);
+  pointer-events: none;
+}
