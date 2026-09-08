@@ -190,14 +190,16 @@ export function getResultPick(match: MatchDetail): ResultPick | null {
   ].filter((item): item is ResultPick => isRealProbability(item.value));
 
   if (match.predicted_winner && isRealProbability(match.winner_proba)) {
-    const normalized = match.predicted_winner.toLowerCase();
+    const normalized = String(match.predicted_winner || "").toLowerCase();
+    const homeName = String(match?.home_team?.name || "").toLowerCase();
+    const awayName = String(match?.away_team?.name || "").toLowerCase();
     if (normalized.includes("draw") || normalized.includes("nul")) {
       return { code: "N", label: "Match nul", value: match.winner_proba };
     }
-    if (normalized.includes("away") || normalized === match.away_team.name.toLowerCase()) {
+    if (normalized.includes("away") || normalized.includes("exter") || (awayName && normalized === awayName)) {
       return { code: "2", label: "Victoire extérieur", value: match.winner_proba };
     }
-    if (normalized.includes("home") || normalized === match.home_team.name.toLowerCase()) {
+    if (normalized.includes("home") || normalized.includes("domi") || (homeName && normalized === homeName)) {
       return { code: "1", label: "Victoire domicile", value: match.winner_proba };
     }
   }
