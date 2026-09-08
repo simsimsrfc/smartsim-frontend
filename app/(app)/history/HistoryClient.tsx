@@ -76,8 +76,8 @@ const TABS: Array<{
   },
   {
     id: "result",
-    title: "Résultat match",
-    subtitle: "Historique de tous les avis résultat",
+    title: "Tous les matchs — Résultat",
+    subtitle: "Historique de tous les avis résultat (hors Smart Sim)",
     icon: <Trophy size={28} />,
   },
 ];
@@ -94,8 +94,8 @@ const TABLE_META: Record<HistoryTab, { title: string; subtitle: string; icon: Re
     icon: <Trophy size={26} />,
   },
   result: {
-    title: "Historique Résultat match",
-    subtitle: "Tous les avis enregistrés sur le résultat du match",
+    title: "Historique Tous les matchs — Résultat",
+    subtitle: "Tous les avis résultat des matchs hors Smart Sim",
     icon: <Trophy size={26} />,
   },
 };
@@ -222,6 +222,22 @@ export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
     result: filteredItems.filter((item) => item.type === "result").map(mapResult),
   }), [filteredItems]);
 
+  const stats = useMemo(() => {
+    const compute = (rows: BaseHistoryItem[]) => {
+      const won = rows.filter((r) => r.status === "won").length;
+      const lost = rows.filter((r) => r.status === "lost").length;
+      const pending = rows.filter((r) => r.status === "pending").length;
+      const settled = won + lost;
+      const rate = settled > 0 ? Math.round((won / settled) * 100) : null;
+      return { won, lost, pending, settled, rate, total: rows.length };
+    };
+    return {
+      over25: compute(historyData.over25),
+      smartResult: compute(historyData.smartResult),
+      result: compute(historyData.result),
+    };
+  }, [historyData]);
+
   const rows = useMemo(() => {
     const source =
       activeTab === "over25"
@@ -284,32 +300,49 @@ export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {TABS.map((tab) => {
           const active = activeTab === tab.id;
+          const s = stats[tab.id];
+          const rateColor = s.rate == null ? "text-[rgba(243,246,247,0.55)]"
+            : s.rate >= 60 ? "text-[#35E75A]"
+            : s.rate >= 45 ? "text-[#D8AF3A]"
+            : "text-[#E85B5B]";
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`group flex min-h-[116px] items-center gap-5 rounded-[18px] border p-5 text-left transition-all ${
+              className={`group flex min-h-[132px] flex-col gap-3 rounded-[18px] border p-5 text-left transition-all ${
                 active
                   ? "border-[rgba(53,231,90,0.45)] bg-[radial-gradient(circle_at_left,rgba(53,231,90,0.18),transparent_42%),rgba(7,16,24,0.86)] shadow-[0_18px_48px_rgba(53,231,90,0.08)]"
                   : "border-white/[0.08] bg-[rgba(7,16,24,0.72)] hover:border-[rgba(53,231,90,0.24)]"
               }`}
             >
-              <span
-                className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition-colors ${
-                  active
-                    ? "border-[rgba(53,231,90,0.28)] bg-[rgba(53,231,90,0.13)] text-[#35E75A]"
-                    : "border-white/[0.10] bg-white/[0.04] text-[rgba(243,246,247,0.72)] group-hover:text-[#35E75A]"
-                }`}
-              >
-                {tab.icon}
-              </span>
-              <span className="min-w-0">
-                <span className={`block text-xl font-extrabold tracking-[-0.03em] ${active ? "text-[#F3F6F7]" : "text-[rgba(243,246,247,0.86)]"}`}>
-                  {tab.title}
+              <div className="flex items-center gap-4">
+                <span
+                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                    active
+                      ? "border-[rgba(53,231,90,0.28)] bg-[rgba(53,231,90,0.13)] text-[#35E75A]"
+                      : "border-white/[0.10] bg-white/[0.04] text-[rgba(243,246,247,0.72)] group-hover:text-[#35E75A]"
+                  }`}
+                >
+                  {tab.icon}
                 </span>
-                <span className="mt-2 block text-sm leading-snug text-[rgba(243,246,247,0.62)]">{tab.subtitle}</span>
-              </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-lg font-extrabold tracking-[-0.03em] ${active ? "text-[#F3F6F7]" : "text-[rgba(243,246,247,0.86)]"}`}>
+                    {tab.title}
+                  </span>
+                  <span className="mt-1 block text-xs leading-snug text-[rgba(243,246,247,0.62)]">{tab.subtitle}</span>
+                </span>
+                <span className={`flex flex-col items-end whitespace-nowrap ${rateColor}`}>
+                  <span className="text-2xl font-black leading-none">{s.rate == null ? "—" : `${s.rate}%`}</span>
+                  <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[rgba(243,246,247,0.55)]">Réussite</span>
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/[0.05] pt-3 text-[11px] font-bold uppercase tracking-[0.06em]">
+                <span className="text-[#35E75A]">✓ {s.won} gagné{s.won > 1 ? "s" : ""}</span>
+                <span className="text-[#E85B5B]">✗ {s.lost} perdu{s.lost > 1 ? "s" : ""}</span>
+                <span className="text-[rgba(243,246,247,0.55)]">⧗ {s.pending} en attente</span>
+                <span className="ml-auto text-[rgba(243,246,247,0.42)]">{s.total} total</span>
+              </div>
             </button>
           );
         })}
