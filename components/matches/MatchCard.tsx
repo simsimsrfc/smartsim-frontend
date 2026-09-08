@@ -100,11 +100,12 @@ export function MatchCard({
             <span className="inline-flex min-w-0 items-center gap-1.5 text-xs">
               <Trophy size={12} className="shrink-0 text-[#D8AF3A]" />
               <span className="truncate font-bold text-fg">
-                {predicted_winner === "home"
-                  ? home_team.name
-                  : predicted_winner === "away"
-                  ? away_team.name
-                  : "Match nul"}
+                {(() => {
+                  const pw = String(predicted_winner || "").toLowerCase();
+                  if (pw === "home" || pw === "domicile" || pw === "1") return home_team.name;
+                  if (pw === "away" || pw === "extérieur" || pw === "exterieur" || pw === "2") return away_team.name;
+                  return "Match nul";
+                })()}
               </span>
               <span className="shrink-0 font-semibold text-fg-muted">{Math.round(winner_proba * 100)}%</span>
             </span>
