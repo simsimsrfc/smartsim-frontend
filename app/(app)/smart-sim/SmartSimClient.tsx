@@ -81,8 +81,8 @@ export function SmartSimClient({ matches, resultMatches, error }: { matches: Mat
   const label = selectedDay === "today" ? "Sélections du jour" : "Sélections de demain";
   const resultPicks = byResultConfidence(dayResultMatches);
   const over25Picks = byOver25(dayMatches);
-  const visibleResultPicks = resultPicks.slice(0, resultVisible);
-  const visibleOver25Picks = over25Picks.slice(0, over25Visible);
+  const visibleResultPicks = resultPicks;
+  const visibleOver25Picks = over25Picks;
 
   return (
     <div className="space-y-5">
@@ -105,12 +105,13 @@ export function SmartSimClient({ matches, resultMatches, error }: { matches: Mat
           >
             {resultPicks.length > 0 ? (
               <>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                   {visibleResultPicks.map((match) => (
                     <MatchCard
                       key={match.fixture_id}
                       match={match}
                       variant="gold"
+                      compact
                       href={`/match/${match.fixture_id}?source=smart-result`}
                     />
                   ))}
@@ -135,12 +136,13 @@ export function SmartSimClient({ matches, resultMatches, error }: { matches: Mat
           >
             {over25Picks.length > 0 ? (
               <>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                   {visibleOver25Picks.map((match) => (
                     <MatchCard
                       key={match.fixture_id}
                       match={match}
                       variant="gold"
+                      compact
                       href={`/match/${match.fixture_id}?source=smart-over25`}
                     />
                   ))}
