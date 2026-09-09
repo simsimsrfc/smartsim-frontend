@@ -74,25 +74,37 @@ export function MatchCard({
 
       <div className={`relative ${compact ? "p-3.5" : "p-5"}`}>
         <div className={`flex items-center justify-between gap-2 ${compact ? "mb-4" : "mb-7"}`}>
-          <span className="flex min-w-0 items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[rgba(200,210,215,0.55)]">
-            {league.flag && <span className="text-base shrink-0">{league.flag}</span>}
-            <span className="whitespace-normal">{league.name || "—"}</span>
+          <span className={`flex min-w-0 items-center gap-1.5 font-extrabold uppercase tracking-[0.12em] text-[rgba(200,210,215,0.55)] ${
+            compact ? "text-[9px]" : "text-[11px] tracking-[0.14em]"
+          }`}>
+            {league.flag && <span className={`shrink-0 ${compact ? "text-sm" : "text-base"}`}>{league.flag}</span>}
+            <span className="truncate">{league.name || "—"}</span>
           </span>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             {match.smart_bet?.is_value && (
               <span
                 title={match.smart_bet.reason || "Smart Sim — cote sous-évaluée par le marché"}
-                className="inline-flex items-center gap-1 rounded-full border border-[#7B5CFF]/50 bg-[#7B5CFF]/14 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.10em] text-[#B7A2FF]"
+                className={`inline-flex items-center gap-0.5 rounded-full border border-[#7B5CFF]/50 bg-[#7B5CFF]/14 font-black uppercase tracking-[0.08em] text-[#B7A2FF] ${
+                  compact ? "px-1.5 py-[2px] text-[8px]" : "px-2 py-0.5 text-[10px]"
+                }`}
               >
-                ★ Smart Sim
+                ★ {compact ? "SS" : "Smart Sim"}
               </span>
             )}
             {is_smart_bet && !match.smart_bet?.is_value && (
-              <span className="inline-flex items-center rounded-full border border-[#F5C542]/45 bg-[#F5C542]/12 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.10em] text-[#F5C542]">
-                Smart Sim
+              <span
+                className={`inline-flex items-center rounded-full border border-[#F5C542]/45 bg-[#F5C542]/12 font-black uppercase tracking-[0.08em] text-[#F5C542] ${
+                  compact ? "px-1.5 py-[2px] text-[8px]" : "px-2 py-0.5 text-[10px]"
+                }`}
+              >
+                {compact ? "SS" : "Smart Sim"}
               </span>
             )}
-            <span className="rounded-full border border-[rgba(130,170,150,0.16)] bg-white/[0.028] px-3 py-1 font-mono text-sm font-bold text-fg/70">
+            <span
+              className={`rounded-full border border-[rgba(130,170,150,0.16)] bg-white/[0.028] font-mono font-bold text-fg/70 ${
+                compact ? "px-2 py-0.5 text-[11px]" : "px-3 py-1 text-sm"
+              }`}
+            >
               {fmtTime(match.date)}
             </span>
           </div>
