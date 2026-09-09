@@ -33,11 +33,53 @@ export function parseAnalysisView(source: MatchAnalysisSource, tab?: string): Ma
   return "over25";
 }
 
+function _formNote(form: string[] | undefined, teamName: string): string | null {
+  if (!form || form.length === 0) return null;
+  const w = form.filter((r) => r === "W").length;
+  const d = form.filter((r) => r === "D").length;
+  const l = form.filter((r) => r === "L").length;
+  const streak = form[0]; // most recent
+  const consecutive = form.findIndex((r) => r !== streak);
+  const streakLen = consecutive === -1 ? form.length : consecutive;
+  if (streakLen >= 3 && streak === "W") return `${teamName} sur ${streakLen} victoires consécutives`;
+  if (streakLen >= 3 && streak === "L") return `${teamName} sur ${streakLen} défaites consécutives — dynamique fragile`;
+  if (w >= 4) return `${teamName} en pleine confiance (${w}V sur les ${form.length} derniers)`;
+  if (l >= 4) return `${teamName} en difficulté (${l}D sur les ${form.length} derniers)`;
+  if (d >= 3) return `${teamName} enchaîne les nuls (${d}N sur les ${form.length} derniers)`;
+  return `${teamName} : forme ${w}V-${d}N-${l}D sur les ${form.length} derniers`;
+}
+
+function _h2hNote(h2h: MatchDetail["h2h"] | undefined, homeId: number | null | undefined,
+                    homeName: string, awayName: string): string | null {
+  if (!h2h || h2h.length === 0) return null;
+  const wins_home = h2h.filter((m) => m.winner_id === homeId).length;
+  const wins_away = h2h.filter((m) => m.winner_id != null && m.winner_id !== homeId).length;
+  const draws = h2h.filter((m) => m.winner_id == null).length;
+  if (wins_home > wins_away + 1)
+    return `Historique favorable à ${homeName} : ${wins_home}V-${draws}N-${wins_away}D sur les derniers face-à-face`;
+  if (wins_away > wins_home + 1)
+    return `${awayName} domine l'historique récent : ${wins_away}V-${draws}N-${wins_home}D`;
+  return `Face-à-face équilibré : ${wins_home}V-${draws}N-${wins_away}D`;
+}
+
+function _humanContext(match: MatchDetail): string[] {
+  const out: string[] = [];
+  const homeNote = _formNote(match.form?.home, match.home_team.name);
+  const awayNote = _formNote(match.form?.away, match.away_team.name);
+  if (homeNote) out.push(homeNote);
+  if (awayNote) out.push(awayNote);
+  const h2h = _h2hNote(match.h2h, match.home_team.id, match.home_team.name, match.away_team.name);
+  if (h2h) out.push(h2h);
+  return out;
+}
+
 export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetail): AnalysisViewConfig {
   const result = getResultPick(match);
   const p = match.probabilities;
   const home = match.home_team.name;
   const away = match.away_team.name;
+  const humanNotes = _humanContext(match);
+  const humanSuffix = humanNotes.length > 0 ? " " + humanNotes.join(" · ") + "." : "";
 
   if (view === "recommendation-over25") {
     const base = getAnalysisViewConfig("over25", match);
@@ -129,7 +171,7 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
       whyTitle: "Pourquoi ce résultat ?",
       summaryTitle: "Ce qu'il faut retenir",
       signals: resultSignals(home, away, label),
-      summary,
+      summary: summary + humanSuffix,
     };
   }
 
@@ -162,7 +204,7 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
       whyTitle: "Pourquoi +1,5 ?",
       summaryTitle: "Ce qu'il faut retenir",
       signals: over15Signals(home, away),
-      summary,
+      summary: summary + humanSuffix,
     };
   }
 
@@ -196,7 +238,7 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
       whyTitle: "Pourquoi L2M ?",
       summaryTitle: "Ce qu'il faut retenir",
       signals: bttsSignals(home, away),
-      summary,
+      summary: summary + humanSuffix,
     };
   }
 
@@ -234,7 +276,7 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
     whyTitle: "Pourquoi +2,5 ?",
     summaryTitle: "Ce qu'il faut retenir",
     signals: over25Signals(home, away),
-    summary,
+    summary: summary + humanSuffix,
   };
 }
 
