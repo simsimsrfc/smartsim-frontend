@@ -33,6 +33,26 @@ export function parseAnalysisView(source: MatchAnalysisSource, tab?: string): Ma
   return "over25";
 }
 
+function _streakStats(form: string[]): { maxW: number; maxL: number; maxN: number; avgWStreak: number } {
+  // Longest run for each outcome + moyenne des séries de V dans les 10 derniers
+  let maxW = 0, maxL = 0, maxN = 0;
+  let curW = 0, curL = 0, curN = 0;
+  const wStreaks: number[] = [];
+  let running = 0;
+  for (const r of form) {
+    if (r === "W") { curW++; running++; maxW = Math.max(maxW, curW); curL = 0; curN = 0; }
+    else {
+      if (running > 0) wStreaks.push(running);
+      running = 0;
+      if (r === "L") { curL++; maxL = Math.max(maxL, curL); curW = 0; curN = 0; }
+      else if (r === "D") { curN++; maxN = Math.max(maxN, curN); curW = 0; curL = 0; }
+    }
+  }
+  if (running > 0) wStreaks.push(running);
+  const avgWStreak = wStreaks.length > 0 ? wStreaks.reduce((a, b) => a + b, 0) / wStreaks.length : 0;
+  return { maxW, maxL, maxN, avgWStreak };
+}
+
 function _formNote(form: string[] | undefined, teamName: string): string | null {
   if (!form || form.length === 0) return null;
   const w = form.filter((r) => r === "W").length;
@@ -41,9 +61,27 @@ function _formNote(form: string[] | undefined, teamName: string): string | null 
   const streak = form[0]; // most recent
   const consecutive = form.findIndex((r) => r !== streak);
   const streakLen = consecutive === -1 ? form.length : consecutive;
-  if (streakLen >= 3 && streak === "W") return `${teamName} sur ${streakLen} victoires consécutives`;
-  if (streakLen >= 3 && streak === "L") return `${teamName} sur ${streakLen} défaites consécutives — dynamique fragile`;
-  if (w >= 4) return `${teamName} en pleine confiance (${w}V sur les ${form.length} derniers)`;
+  const s = _streakStats(form);
+
+  // Cas 1 : série en cours exceptionnelle vs habitude de l'équipe
+  if (streakLen >= 3 && streak === "W") {
+    const isExceptional = streakLen > s.avgWStreak * 1.6 && s.avgWStreak > 0 && streakLen > s.maxW - 1;
+    if (isExceptional && streakLen >= s.maxW) {
+      return `${teamName} sur ${streakLen} victoires (série max récente atteinte — attention régression possible)`;
+    }
+    return `${teamName} sur ${streakLen} victoires consécutives (moyenne récente ${s.avgWStreak.toFixed(1)})`;
+  }
+  if (streakLen >= 3 && streak === "L") {
+    return `${teamName} sur ${streakLen} défaites consécutives — dynamique fragile`;
+  }
+  // Cas 2 : équipe qui n'arrive pas à enchaîner
+  if (w >= 3 && s.maxW <= 1) {
+    return `${teamName} : ${w}V mais aucune série (max 1V consécutive sur les ${form.length} derniers — irrégulier)`;
+  }
+  if (w >= 4) {
+    const streakInfo = s.maxW >= 3 ? `série max ${s.maxW}V` : `sans série (max ${s.maxW}V)`;
+    return `${teamName} en pleine confiance (${w}V sur les ${form.length} derniers, ${streakInfo})`;
+  }
   if (l >= 4) return `${teamName} en difficulté (${l}D sur les ${form.length} derniers)`;
   if (d >= 3) return `${teamName} enchaîne les nuls (${d}N sur les ${form.length} derniers)`;
   return `${teamName} : forme ${w}V-${d}N-${l}D sur les ${form.length} derniers`;
