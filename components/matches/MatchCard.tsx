@@ -77,15 +77,15 @@ export function MatchCard({
           <div className="flex shrink-0 items-center gap-2">
             {match.smart_bet?.is_value && (
               <span
-                title={match.smart_bet.reason || "Value bet — cote sous-évaluée par le marché"}
-                className="inline-flex items-center rounded-full border border-[#7B5CFF]/45 bg-[#7B5CFF]/12 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.10em] text-[#B7A2FF]"
+                title={match.smart_bet.reason || "Smart Sim — cote sous-évaluée par le marché"}
+                className="inline-flex items-center gap-1 rounded-full border border-[#7B5CFF]/50 bg-[#7B5CFF]/14 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.10em] text-[#B7A2FF]"
               >
-                ★ Value
+                ★ Smart Sim
               </span>
             )}
             {is_smart_bet && !match.smart_bet?.is_value && (
               <span className="inline-flex items-center rounded-full border border-[#F5C542]/45 bg-[#F5C542]/12 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.10em] text-[#F5C542]">
-                Smart
+                Smart Sim
               </span>
             )}
             <span className="rounded-full border border-[rgba(130,170,150,0.16)] bg-white/[0.028] px-3 py-1 font-mono text-sm font-bold text-fg/70">
