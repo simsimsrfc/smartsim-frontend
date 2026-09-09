@@ -44,6 +44,11 @@ export type MatchSummary = {
     reason: string;
   };
   is_smart_bet: boolean;
+  smart_bet?: {
+    is_smart_bet?: boolean;
+    is_value?: boolean;
+    reason?: string;
+  } | null;
   label: string;
   odds: { over_25: number | null; over_15: number | null; btts: number | null };
 };
