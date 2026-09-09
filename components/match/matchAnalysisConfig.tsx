@@ -93,78 +93,88 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
   if (view === "result") {
     const available = Boolean(result && isRealProbability(result.value));
     const label = result?.label || "Indisponible";
+    const pct = result?.value ? Math.round(result.value * 100) : 0;
+    const confLevel = pct >= 70 ? "très nette" : pct >= 55 ? "solide" : pct >= 45 ? "légère" : "faible";
+    const home_prob = Math.round((p?.home_win || 0) * 100);
+    const draw_prob = Math.round((p?.draw || 0) * 100);
+    const away_prob = Math.round((p?.away_win || 0) * 100);
     return {
       title: "Analyse résultat du match",
       primary: result?.code || "—",
       subPrimary: available ? label : "",
       probability: result?.value ?? null,
       available,
-      shortText: available ? `Notre lecture penche vers ${label.toLowerCase()} sur cette rencontre.` : "",
+      shortText: available ? `Le modèle donne ${pct}% à ${label.toLowerCase()}, une préférence ${confLevel}.` : "",
       whyTitle: "Pourquoi ce résultat ?",
       summaryTitle: "Résumé de pourquoi ce résultat",
       signals: resultSignals(home, away, label),
       summary: available
-        ? `La lecture du match donne un léger avantage au scénario ${label.toLowerCase()}, en s’appuyant sur l’équilibre global entre dynamique, efficacité récente et contexte de rencontre. ${home} et ${away} présentent des profils capables de peser sur le déroulement du match, mais les signaux disponibles orientent la confiance vers cette issue sans exclure un scénario plus fermé ou plus disputé.`
-        : `Les données disponibles ne permettent pas d’afficher une lecture fiable sur l’issue du match entre ${home} et ${away}.`,
+        ? `Le calcul répartit les probabilités ainsi : ${home} ${home_prob}% · nul ${draw_prob}% · ${away} ${away_prob}%. ${label} ressort avec ${pct}% (préférence ${confLevel}). Cette lecture s'appuie sur la forme récente pondérée des deux équipes, l'avantage du terrain et le contexte de rencontre. Les autres issues restent possibles mais moins probables selon les signaux actuels.`
+        : `Les données disponibles ne permettent pas d'afficher une lecture fiable sur l'issue du match entre ${home} et ${away}.`,
     };
   }
 
   if (view === "over15") {
     const value = safeProbability(p.over_15);
+    const pct = value ? Math.round(value * 100) : 0;
+    const strength = pct >= 85 ? "très forte" : pct >= 70 ? "solide" : pct >= 55 ? "correcte" : "modérée";
     return {
       title: "Analyse +1,5 buts",
       primary: "+1,5 buts",
       subPrimary: "",
       probability: value,
       available: value !== null,
-      shortText: "Le match présente un profil compatible avec au moins deux buts.",
+      shortText: value !== null ? `Probabilité ${strength} à ${pct}% de dépasser 2 buts.` : "",
       whyTitle: "Pourquoi +1,5 ?",
       summaryTitle: "Résumé de pourquoi +1,5",
       signals: over15Signals(home, away),
       summary:
         value !== null
-          ? `Cette rencontre présente plusieurs signaux favorables à un total d’au moins deux buts. Les deux équipes disposent de ressources offensives, le rythme attendu peut ouvrir des espaces et le contexte du match laisse envisager des occasions des deux côtés. La lecture reste donc cohérente avec un scénario où le score évolue suffisamment pour dépasser le seuil de +1,5 buts.`
-          : `Les données disponibles ne permettent pas d’afficher une lecture fiable sur le seuil +1,5 buts pour ce match.`,
+          ? `Le modèle estime à ${pct}% la probabilité d'atteindre au moins 2 buts (confiance ${strength}). Ce seuil reste le plus accessible parmi les marchés buts : il suffit qu'une des deux équipes marque un doublé ou que le match soit ouvert des deux côtés. Le profil offensif de ${home} et ${away} rend ce scénario probable, même si un match verrouillé reste possible.`
+          : `Les données disponibles ne permettent pas d'afficher une lecture fiable sur le seuil +1,5 buts pour ce match.`,
     };
   }
 
   if (view === "btts") {
     const value = safeProbability(p.btts);
+    const pct = value ? Math.round(value * 100) : 0;
     const isSelection = Boolean(match.l2m_selection?.is_selection);
+    const strength = pct >= 65 ? "solide" : pct >= 50 ? "équilibrée" : "faible";
     return {
       title: "Analyse L2M",
       primary: "L2M",
       subPrimary: "Les deux marquent",
       probability: value,
       available: value !== null,
-      shortText: isSelection
-        ? "Lecture L2M renforcée par une probabilité supérieure au seuil de sélection."
-        : "Les deux équipes peuvent trouver le chemin des filets.",
+      shortText: value !== null ? `${pct}% que les deux équipes marquent (lecture ${strength}).` : "",
       whyTitle: "Pourquoi L2M ?",
       summaryTitle: "Résumé de pourquoi L2M",
       signals: bttsSignals(home, away),
       summary:
         value !== null
-          ? `${home} et ${away} possèdent tous les deux des arguments pour marquer dans cette rencontre. La lecture met en avant des profils offensifs capables de créer des situations dangereuses, tout en laissant la possibilité d’espaces défensifs dans certaines phases du match. Le scénario où les deux équipes trouvent le chemin des filets reste donc cohérent avec les données disponibles.`
-          : `Les données disponibles ne permettent pas d’afficher une lecture fiable sur L2M pour ce match.`,
+          ? `Probabilité estimée à ${pct}% que les deux équipes marquent. ${isSelection ? "Cette valeur dépasse le seuil de sélection L2M, ce qui renforce la lecture. " : ""}${home} et ${away} possèdent chacun des arguments offensifs pour trouver le chemin des filets, tout en laissant des espaces défensifs dans certaines phases. Un scénario où l'une des deux équipes garde sa cage inviolée reste néanmoins envisageable.`
+          : `Les données disponibles ne permettent pas d'afficher une lecture fiable sur L2M pour ce match.`,
     };
   }
 
   const value = safeProbability(over25DisplayProbability(match));
+  const pct = value ? Math.round(value * 100) : 0;
+  const strength = pct >= 70 ? "très marquée" : pct >= 55 ? "solide" : pct >= 45 ? "équilibrée" : "modérée";
+  const btts = Math.round((p?.btts || 0) * 100);
   return {
     title: "Analyse +2,5 buts",
     primary: "+2,5 buts",
     subPrimary: "",
     probability: value,
     available: value !== null,
-    shortText: "Le profil du match suggère plus de 2,5 buts dans cette rencontre.",
+    shortText: value !== null ? `${pct}% de chance que ce match dépasse 3 buts (tendance ${strength}).` : "",
     whyTitle: "Pourquoi +2,5 ?",
     summaryTitle: "Résumé de pourquoi +2,5",
     signals: over25Signals(home, away),
     summary:
       value !== null
-        ? `Notre lecture met en avant un profil de match ouvert. Les deux équipes présentent des signaux offensifs intéressants, avec une capacité à créer des occasions et des défenses qui peuvent laisser des espaces. Le scénario d’un match animé reste donc cohérent avec les données disponibles.`
-        : `Les données disponibles ne permettent pas d’afficher une lecture fiable sur le seuil +2,5 buts pour ce match.`,
+        ? `Le modèle Poisson estime à ${pct}% la probabilité qu'au moins 3 buts soient inscrits (tendance ${strength})${btts > 0 ? `, avec ${btts}% de chance que les deux équipes marquent` : ""}. Cette lecture s'appuie sur la moyenne pondérée des buts marqués et encaissés par ${home} et ${away} sur leurs 10 dernières rencontres. Un match plus fermé reste possible si l'un des deux entraîneurs opte pour un plan prudent.`
+        : `Les données disponibles ne permettent pas d'afficher une lecture fiable sur le seuil +2,5 buts pour ce match.`,
   };
 }
 
