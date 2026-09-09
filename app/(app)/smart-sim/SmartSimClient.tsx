@@ -17,14 +17,24 @@ function resultPickProbability(match: MatchSummary): number | null {
 }
 
 function byResultConfidence(matches: MatchSummary[]): MatchSummary[] {
+  // Smart Sim Résultat = évidence (winner conf ≥ 55%) OU value bet 1X2
   return [...(matches || [])]
-    .filter((match) => resultPickProbability(match) !== null)
+    .filter((match) => {
+      const p = resultPickProbability(match);
+      const isValue = !!match?.smart_bet?.is_value;
+      return (p !== null && p >= 0.55) || isValue;
+    })
     .sort((a, b) => (resultPickProbability(b) || 0) - (resultPickProbability(a) || 0));
 }
 
 function byOver25(matches: MatchSummary[]): MatchSummary[] {
+  // Smart Sim +2,5 = évidence (O2.5 ≥ 55%) OU value bet
   return [...(matches || [])]
-    .filter((match) => Number.isFinite(match?.probabilities?.over_25))
+    .filter((match) => {
+      const o = match?.probabilities?.over_25 || 0;
+      const isValue = !!match?.smart_bet?.is_value;
+      return Number.isFinite(o) && (o >= 0.55 || isValue);
+    })
     .sort((a, b) => b.probabilities.over_25 - a.probabilities.over_25);
 }
 
