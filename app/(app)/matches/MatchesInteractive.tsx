@@ -34,7 +34,23 @@ function formatTime(iso: string): string {
   }
 }
 
+// Utilise result_selection (peut inclure double chance) sinon argmax des probas
+function resultPick(match: MatchSummary): { code: string; label: string; proba: number } {
+  const rs = match.result_selection;
+  if (rs?.is_result_selection && rs.pick && rs.probability != null) {
+    return { code: rs.pick, label: rs.label || rs.pick, proba: rs.probability };
+  }
+  const p = match.probabilities;
+  const arr = [
+    { c: "1", v: p.home_win || 0, l: "Victoire domicile" },
+    { c: "N", v: p.draw || 0, l: "Match nul" },
+    { c: "2", v: p.away_win || 0, l: "Victoire extérieur" },
+  ].sort((a, b) => b.v - a.v);
+  return { code: arr[0].c, label: arr[0].l, proba: arr[0].v };
+}
+
 function resultCode(match: MatchSummary): "1" | "N" | "2" {
+  // Compat: pour le filtre "Résultats" on ne prend en compte que les singles
   const p = match.probabilities;
   const arr: Array<{ c: "1" | "N" | "2"; v: number }> = [
     { c: "1", v: p.home_win || 0 },
@@ -42,10 +58,6 @@ function resultCode(match: MatchSummary): "1" | "N" | "2" {
     { c: "2", v: p.away_win || 0 },
   ];
   return arr.sort((a, b) => b.v - a.v)[0].c;
-}
-
-function resultLabel(code: "1" | "N" | "2"): string {
-  return code === "1" ? "Victoire domicile" : code === "2" ? "Victoire extérieur" : "Match nul";
 }
 
 export function MatchesInteractive({
@@ -256,8 +268,9 @@ function SelectBox({
 }
 
 function MatchRow({ match }: { match: MatchSummary }) {
-  const code = resultCode(match);
-  const label = resultLabel(code);
+  const pick = resultPick(match);
+  const code = pick.code;
+  const label = pick.label;
   const finished = isFinished(match);
   const homeGoals = match.score?.home;
   const awayGoals = match.score?.away;
@@ -306,13 +319,13 @@ function MatchRow({ match }: { match: MatchSummary }) {
       <MarketCell label="BTTS" value={match.probabilities.btts || 0} />
       <div className="w-[104px]">
         <div className="mb-2 text-sm font-black leading-none text-[#35E75A]">
-          {Math.round(Math.max(match.probabilities.home_win || 0, match.probabilities.draw || 0, match.probabilities.away_win || 0) * 100)}%
+          {Math.round(pick.proba * 100)}%
         </div>
         <div className="h-2 w-[100px] overflow-hidden rounded-full bg-white/[0.08]">
           <div
             className="h-full rounded-full bg-[#35E75A]"
             style={{
-              width: `${Math.round(Math.max(match.probabilities.home_win || 0, match.probabilities.draw || 0, match.probabilities.away_win || 0) * 100)}%`,
+              width: `${Math.round(pick.proba * 100)}%`,
             }}
           />
         </div>

@@ -138,22 +138,39 @@ export function MatchCard({
         </div>
 
         <div className={`flex items-center justify-between gap-2 border-t border-white/[0.06] ${compact ? "pt-2.5" : "pt-4"}`}>
-          {predicted_winner ? (
-            <span className="inline-flex min-w-0 items-center gap-1.5 text-xs">
-              <Trophy size={12} className="shrink-0 text-[#D8AF3A]" />
-              <span className="truncate font-bold text-fg">
-                {(() => {
-                  const pw = String(predicted_winner || "").toLowerCase();
-                  if (pw === "home" || pw === "domicile" || pw === "1") return home_team.name;
-                  if (pw === "away" || pw === "extérieur" || pw === "exterieur" || pw === "2") return away_team.name;
-                  return "Match nul";
-                })()}
+          {(() => {
+            // Priorité : result_selection (double chance possible) > predicted_winner
+            const rs = match.result_selection;
+            let label = ""; let proba: number | null = null;
+            if (rs?.is_result_selection && rs.pick && rs.probability != null) {
+              // Double chance : combine 2 noms d'équipes
+              if (rs.pick === "1N") label = `${home_team.name} ou nul`;
+              else if (rs.pick === "N2") label = `Nul ou ${away_team.name}`;
+              else if (rs.pick === "12") label = `${home_team.name} ou ${away_team.name}`;
+              else if (rs.pick === "1") label = home_team.name;
+              else if (rs.pick === "2") label = away_team.name;
+              else if (rs.pick === "N") label = "Match nul";
+              proba = rs.probability;
+            } else if (predicted_winner) {
+              const pw = String(predicted_winner || "").toLowerCase();
+              if (pw === "home" || pw === "domicile" || pw === "1") label = home_team.name;
+              else if (pw === "away" || pw === "extérieur" || pw === "exterieur" || pw === "2") label = away_team.name;
+              else label = "Match nul";
+              proba = winner_proba || null;
+            }
+            if (!label) {
+              return <span className="text-xs text-fg-muted">Marché serré — pas de pick net</span>;
+            }
+            return (
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-xs">
+                <Trophy size={12} className="shrink-0 text-[#D8AF3A]" />
+                <span className="truncate font-bold text-fg">{label}</span>
+                {proba != null && (
+                  <span className="shrink-0 font-semibold text-fg-muted">{Math.round(proba * 100)}%</span>
+                )}
               </span>
-              <span className="shrink-0 font-semibold text-fg-muted">{Math.round(winner_proba * 100)}%</span>
-            </span>
-          ) : (
-            <span className="text-xs text-fg-muted">—</span>
-          )}
+            );
+          })()}
           <ChevronRight size={16} className="shrink-0 text-fg/40 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-fg/70" />
         </div>
       </div>
