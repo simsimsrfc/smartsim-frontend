@@ -83,12 +83,19 @@ export function MatchCard({
           <div className="flex shrink-0 items-center gap-1.5">
             {match.smart_bet?.is_value && (
               <span
-                title={match.smart_bet.reason || "Smart Sim — cote sous-évaluée par le marché"}
+                title={`${match.smart_bet.reason || "Smart Sim — cote sous-évaluée par le marché"}${
+                  (match.smart_bet.kelly_pct || 0) > 0
+                    ? ` · Mise conseillée : ${(match.smart_bet.kelly_pct! * 100).toFixed(1)}% bankroll (Kelly fractionnaire)`
+                    : ""
+                }`}
                 className={`inline-flex items-center gap-0.5 rounded-full border border-[#7B5CFF]/50 bg-[#7B5CFF]/14 font-black uppercase tracking-[0.08em] text-[#B7A2FF] ${
                   compact ? "px-1.5 py-[2px] text-[8px]" : "px-2 py-0.5 text-[10px]"
                 }`}
               >
                 ★ {compact ? "SS" : "Smart Sim"}
+                {!compact && (match.smart_bet.kelly_pct || 0) > 0 && (
+                  <span className="ml-1 opacity-80">{Math.round(match.smart_bet.kelly_pct! * 100)}%</span>
+                )}
               </span>
             )}
             {is_smart_bet && !match.smart_bet?.is_value && (

@@ -48,6 +48,8 @@ export type MatchSummary = {
     is_smart_bet?: boolean;
     is_value?: boolean;
     reason?: string;
+    kelly_pct?: number;
+    kelly_market?: string;
   } | null;
   label: string;
   odds: { over_25: number | null; over_15: number | null; btts: number | null };
