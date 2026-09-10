@@ -74,6 +74,7 @@ export function formatDate(iso: string): string {
   if (!iso) return "—";
   try {
     return new Date(iso).toLocaleDateString("fr-FR", {
+      timeZone: "Europe/Paris",
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -87,7 +88,7 @@ export function formatDate(iso: string): string {
 export function formatTime(iso: string): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
   } catch {
     return "—";
   }

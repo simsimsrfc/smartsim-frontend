@@ -56,7 +56,7 @@ function formatTime(iso: string): string {
     return new Date(iso).toLocaleTimeString("fr-FR", {
       hour: "2-digit",
       minute: "2-digit",
-    });
+    timeZone: "Europe/Paris"});
   } catch {
     return "--:--";
   }
@@ -77,7 +77,7 @@ function formatDateLabel(iso: string): string {
     return date.toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "short",
-    });
+    timeZone: "Europe/Paris"});
   } catch {
     return "Aujourd'hui";
   }

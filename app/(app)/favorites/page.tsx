@@ -496,14 +496,14 @@ function formatDate(iso?: string): string {
   if (!iso) return "Date indisponible";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "Date indisponible";
-  return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+  return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" , timeZone: "Europe/Paris"});
 }
 
 function formatTime(iso?: string): string {
   if (!iso) return "--:--";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "--:--";
-  return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" , timeZone: "Europe/Paris"});
 }
 
 function formatOptionalPct(value?: number | null): string {
