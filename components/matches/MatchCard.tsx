@@ -1,8 +1,12 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import { Trophy, ChevronRight } from "lucide-react";
 import type { MatchSummary } from "@/lib/types";
 import { over25DisplayProbability } from "@/lib/probabilities";
+import { useUserEmail } from "@/components/providers/UserProvider";
+import { useBankroll } from "@/lib/useBankroll";
+import { isAdmin } from "@/lib/admin";
 
 function fmtTime(iso: string): string {
   if (!iso) return "—";
@@ -62,6 +66,14 @@ export function MatchCard({
   const hg = match.score?.home;
   const ag = match.score?.away;
 
+  // Admin only : affiche la mise Kelly en € basée sur la bankroll
+  const userEmail = useUserEmail();
+  const bankroll = useBankroll(userEmail);
+  const kellyPct = match.smart_bet?.kelly_pct || 0;
+  const kellyEur = (isAdmin(userEmail) && bankroll?.amount && kellyPct > 0)
+    ? Math.round(bankroll.amount * kellyPct * 10) / 10
+    : null;
+
   return (
     <Link
       href={href || `/match/${match.fixture_id}`}
@@ -93,8 +105,10 @@ export function MatchCard({
                 }`}
               >
                 ★ {compact ? "SS" : "Smart Sim"}
-                {!compact && (match.smart_bet.kelly_pct || 0) > 0 && (
-                  <span className="ml-1 opacity-80">{Math.round(match.smart_bet.kelly_pct! * 100)}%</span>
+                {!compact && kellyPct > 0 && (
+                  <span className="ml-1 opacity-80">
+                    {kellyEur != null ? `${kellyEur} ${bankroll?.currency || "€"}` : `${Math.round(kellyPct * 100)}%`}
+                  </span>
                 )}
               </span>
             )}

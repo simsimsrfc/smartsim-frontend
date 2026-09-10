@@ -2,12 +2,14 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { UserProvider } from "@/components/providers/UserProvider";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
+    <UserProvider email={user?.email ?? null}>
     <div className="min-h-screen overflow-x-hidden bg-[#050B12]">
       {/* Desktop sidebar — inchangée (lg+) */}
       <Sidebar userEmail={user?.email ?? null} />
@@ -29,5 +31,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* Mobile bottom navigation — visible uniquement < lg */}
       <MobileBottomNav />
     </div>
+    </UserProvider>
   );
 }

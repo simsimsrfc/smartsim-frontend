@@ -78,6 +78,14 @@ export const api = {
       `/api/matches/smart-selections?day=${day}&min_proba=${minProba}`
     ),
   matchDetail: (id: string) => http<MatchDetail>(`/api/matches/${id}`),
+  getBankroll: (userEmail: string) =>
+    http<{ amount: number; currency: string; updated_at?: string; empty?: boolean }>(
+      "/api/user/bankroll", { headers: { "X-User-Email": userEmail } }),
+  setBankroll: (userEmail: string, amount: number, currency = "EUR") =>
+    http<{ ok: boolean; amount: number; currency: string }>(
+      "/api/user/bankroll",
+      { method: "POST", headers: { "X-User-Email": userEmail },
+        body: JSON.stringify({ amount, currency }) }),
   historyDates: () =>
     http<{ count: number; dates: string[] }>("/api/history/dates"),
   history: (type?: "smart-over25" | "smart-result" | "result") =>

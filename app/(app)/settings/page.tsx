@@ -1,6 +1,8 @@
 import { User, LogOut, Mail, Shield } from "lucide-react";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { BankrollSection } from "./BankrollSection";
+import { isAdmin } from "@/lib/admin";
 
 export const metadata = { title: "Paramètres — Smart Sim" };
 
@@ -27,6 +29,11 @@ export default async function SettingsPage() {
           />
         </div>
       </section>
+
+      {/* Bankroll — admin uniquement */}
+      {isAdmin(user?.email) && user?.email && (
+        <BankrollSection userEmail={user.email} />
+      )}
 
       {/* Session */}
       <section className="rounded-xl border border-soft bg-gradient-card shadow-card p-6">
