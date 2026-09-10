@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, CalendarDays, Star, History, Settings, LogOut } from "lucide-react";
+import { Home, Activity, CalendarDays, Star, History, Settings, LogOut, ShieldCheck } from "lucide-react";
 import clsx from "clsx";
 import { Logo } from "./Logo";
+import { isAdmin } from "@/lib/admin";
 
 const NAV_ITEMS = [
   { href: "/", label: "Accueil", icon: Home },
@@ -20,6 +21,7 @@ export function Sidebar({ userEmail }: Props) {
   const pathname = usePathname();
   const initial = (userEmail?.[0] || "?").toUpperCase();
   const displayName = userEmail?.split("@")[0] || "Utilisateur";
+  const admin = isAdmin(userEmail);
 
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[260px] flex-col overflow-hidden border-r border-[rgba(130,170,150,0.12)] bg-[#050B12] lg:flex">
@@ -68,7 +70,15 @@ export function Sidebar({ userEmail }: Props) {
             {initial}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-fg text-sm font-semibold truncate capitalize">{displayName}</div>
+            <div className="flex items-center gap-1.5">
+              <div className="text-fg text-sm font-semibold truncate capitalize">{displayName}</div>
+              {admin && (
+                <span className="inline-flex items-center gap-0.5 rounded-full border border-[#F5C542]/45 bg-[#F5C542]/12 px-1.5 py-[1px] text-[9px] font-black uppercase tracking-[0.10em] text-[#F5C542]" title="Compte administrateur">
+                  <ShieldCheck size={9} strokeWidth={3} />
+                  Admin
+                </span>
+              )}
+            </div>
             <div className="text-fg-muted text-xs truncate">{userEmail || "Non connecté"}</div>
           </div>
         </div>
