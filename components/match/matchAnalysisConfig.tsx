@@ -111,6 +111,27 @@ function _humanContext(match: MatchDetail): string[] {
   return out;
 }
 
+function _insightsFor(view: MatchAnalysisView, match: MatchDetail): { headline?: string; warning?: string } {
+  const ins = match.insights || {};
+  if (view === "over25" || view === "recommendation-over25") {
+    const o = (ins as any).over25 || {};
+    return { headline: o.headline, warning: o.warning };
+  }
+  if (view === "over15") {
+    const o = (ins as any).over15 || {};
+    return { headline: o.headline, warning: o.warning };
+  }
+  if (view === "btts") {
+    const o = (ins as any).btts || {};
+    return { headline: o.headline, warning: o.warning };
+  }
+  if (view === "result" || view === "recommendation-result") {
+    const o = (ins as any).result || {};
+    return { headline: o.headline, warning: o.warning };
+  }
+  return {};
+}
+
 export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetail): AnalysisViewConfig {
   const result = getResultPick(match);
   const p = match.probabilities;
@@ -118,6 +139,7 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
   const away = match.away_team.name;
   const humanNotes = _humanContext(match);
   const humanSuffix = humanNotes.length > 0 ? " " + humanNotes.join(" · ") + "." : "";
+  const _insights = _insightsFor(view, match);
 
   if (view === "recommendation-over25") {
     const base = getAnalysisViewConfig("over25", match);
@@ -210,6 +232,8 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
       summaryTitle: "Ce qu'il faut retenir",
       signals: resultSignals(home, away, label),
       summary: summary + humanSuffix,
+      insightHeadline: _insights.headline,
+      insightWarning: _insights.warning,
     };
   }
 
@@ -243,6 +267,8 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
       summaryTitle: "Ce qu'il faut retenir",
       signals: over15Signals(home, away),
       summary: summary + humanSuffix,
+      insightHeadline: _insights.headline,
+      insightWarning: _insights.warning,
     };
   }
 
@@ -277,6 +303,8 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
       summaryTitle: "Ce qu'il faut retenir",
       signals: bttsSignals(home, away),
       summary: summary + humanSuffix,
+      insightHeadline: _insights.headline,
+      insightWarning: _insights.warning,
     };
   }
 
@@ -315,6 +343,8 @@ export function getAnalysisViewConfig(view: MatchAnalysisView, match: MatchDetai
     summaryTitle: "Ce qu'il faut retenir",
     signals: over25Signals(home, away),
     summary: summary + humanSuffix,
+    insightHeadline: _insights.headline,
+    insightWarning: _insights.warning,
   };
 }
 

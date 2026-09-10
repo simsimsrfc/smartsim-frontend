@@ -1,3 +1,4 @@
+import { AlertTriangle, Info } from "lucide-react";
 import type { AnalysisViewConfig } from "./types";
 import { confidenceLabel, formatProbability } from "./matchUtils";
 
@@ -12,6 +13,18 @@ export function PrimaryAnalysisCard({ data }: { data: AnalysisViewConfig }) {
           </span>
         )}
       </div>
+      {data.insightHeadline && (
+        <div className="mb-3 flex items-start gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2">
+          <Info size={14} className="mt-0.5 shrink-0 text-[#7FB3FF]" />
+          <span className="text-sm font-semibold leading-snug text-[rgba(243,246,247,0.82)]">{data.insightHeadline}</span>
+        </div>
+      )}
+      {data.insightWarning && (
+        <div className="mb-3 flex items-start gap-2 rounded-xl border border-[rgba(232,91,91,0.30)] bg-[rgba(232,91,91,0.08)] px-3 py-2">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0 text-[#E85B5B]" />
+          <span className="text-sm font-semibold leading-snug text-[rgba(255,180,180,0.92)]">{data.insightWarning}</span>
+        </div>
+      )}
       <div className="rounded-2xl border border-[#35E75A]/20 bg-[radial-gradient(circle_at_0%_0%,rgba(53,231,90,0.14),transparent_45%),rgba(5,12,18,0.74)] p-4 sm:p-5 lg:p-6">
         {data.available ? (
           <div className="grid gap-4 md:grid-cols-[1fr_130px_150px] md:items-center">

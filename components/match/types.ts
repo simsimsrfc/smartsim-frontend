@@ -47,4 +47,7 @@ export type AnalysisViewConfig = {
   summaryTitle: string;
   signals: AnalysisSignal[];
   summary: string;
+  // Insight optionnels du backend (surface warnings et messages contextuels)
+  insightHeadline?: string;
+  insightWarning?: string;
 };
