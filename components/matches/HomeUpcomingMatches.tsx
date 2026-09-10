@@ -121,9 +121,20 @@ function getStatTone(value: number): string {
 }
 
 function getWinnerLabel(match: MatchSummary): string {
-  if (match.predicted_winner === "home") return "Home";
-  if (match.predicted_winner === "away") return "Away";
-  if (match.predicted_winner === "draw") return "Draw";
+  // Priorité result_selection (double chance possible), sinon predicted_winner
+  const rs = match.result_selection;
+  if (rs?.is_result_selection && rs.pick) {
+    if (rs.pick === "1") return match.home_team.name;
+    if (rs.pick === "2") return match.away_team.name;
+    if (rs.pick === "N") return "Match nul";
+    if (rs.pick === "1N") return `${match.home_team.name} ou nul`;
+    if (rs.pick === "N2") return `Nul ou ${match.away_team.name}`;
+    if (rs.pick === "12") return `${match.home_team.name} ou ${match.away_team.name}`;
+  }
+  const pw = String(match.predicted_winner || "").toLowerCase();
+  if (pw === "home" || pw === "domicile" || pw === "1") return match.home_team.name;
+  if (pw === "away" || pw === "extérieur" || pw === "exterieur" || pw === "2") return match.away_team.name;
+  if (pw === "draw" || pw === "nul" || pw === "n") return "Match nul";
   return "Signal";
 }
 

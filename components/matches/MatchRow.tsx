@@ -42,10 +42,24 @@ function getTeamInitials(name: string): string {
 }
 
 export function MatchRow({ match: m }: { match: MatchSummary }) {
-  const winnerLabel =
-    m.predicted_winner === "home" ? "Home" :
-    m.predicted_winner === "away" ? "Away" :
-    m.predicted_winner === "draw" ? "Draw" : null;
+  // Priorité result_selection (double chance), sinon predicted_winner
+  const rs = m.result_selection;
+  let winnerLabel: string | null = null;
+  let winnerProba = m.winner_proba;
+  if (rs?.is_result_selection && rs.pick && rs.probability != null) {
+    if (rs.pick === "1") winnerLabel = m.home_team.name;
+    else if (rs.pick === "2") winnerLabel = m.away_team.name;
+    else if (rs.pick === "N") winnerLabel = "Match nul";
+    else if (rs.pick === "1N") winnerLabel = `${m.home_team.name} ou nul`;
+    else if (rs.pick === "N2") winnerLabel = `Nul ou ${m.away_team.name}`;
+    else if (rs.pick === "12") winnerLabel = `${m.home_team.name} ou ${m.away_team.name}`;
+    winnerProba = rs.probability;
+  } else if (m.predicted_winner) {
+    const pw = String(m.predicted_winner || "").toLowerCase();
+    if (pw === "home" || pw === "domicile" || pw === "1") winnerLabel = m.home_team.name;
+    else if (pw === "away" || pw === "extérieur" || pw === "exterieur" || pw === "2") winnerLabel = m.away_team.name;
+    else if (pw === "draw" || pw === "nul" || pw === "n") winnerLabel = "Match nul";
+  }
 
   return (
     <Link
@@ -67,7 +81,7 @@ export function MatchRow({ match: m }: { match: MatchSummary }) {
         <StatPill label="BTTS" value={m.probabilities.btts} size="sm" />
       </div>
       <div className="flex min-w-[118px] justify-end max-[1100px]:col-start-2 max-[1100px]:row-start-3 max-[1100px]:justify-start">
-        <SignalBadge isSmart={m.is_smart_bet} winnerLabel={winnerLabel} winnerProba={m.winner_proba} />
+        <SignalBadge isSmart={m.is_smart_bet} winnerLabel={winnerLabel} winnerProba={winnerProba} />
       </div>
       <ChevronRight size={18} className="flex w-8 justify-center text-fg/35 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-fg/70 max-[1100px]:col-start-3 max-[1100px]:row-span-3" />
     </Link>
