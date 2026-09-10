@@ -1,6 +1,6 @@
 // Central admin check — single source of truth
 const ADMIN_EMAILS = new Set([
-  "simsimsrfc@gmail.com",
+  "s.floret35@gmail.com",
 ]);
 
 export function isAdmin(email?: string | null): boolean {
