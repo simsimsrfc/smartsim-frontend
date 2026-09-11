@@ -1,19 +1,21 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, CalendarDays, Star, History, Settings, LogOut, ShieldCheck } from "lucide-react";
+import { Home, Activity, CalendarDays, Star, History, Settings, LogOut, ShieldCheck, Layers } from "lucide-react";
 import clsx from "clsx";
 import { Logo } from "./Logo";
 import { isAdmin } from "@/lib/admin";
 
-const NAV_ITEMS = [
+const NAV_ITEMS_BASE = [
   { href: "/", label: "Accueil", icon: Home },
   { href: "/smart-sim", label: "Smart Sim", icon: Activity },
   { href: "/matches", label: "Tous les matchs", icon: CalendarDays },
   { href: "/favorites", label: "Favoris", icon: Star },
   { href: "/history", label: "Historique", icon: History },
   { href: "/settings", label: "Paramètres", icon: Settings },
-];
+] as const;
+
+const NAV_ITEM_COMBOS = { href: "/combos", label: "Combos bankroll", icon: Layers, adminOnly: true } as const;
 
 type Props = { userEmail?: string | null };
 
@@ -22,6 +24,9 @@ export function Sidebar({ userEmail }: Props) {
   const initial = (userEmail?.[0] || "?").toUpperCase();
   const displayName = userEmail?.split("@")[0] || "Utilisateur";
   const admin = isAdmin(userEmail);
+  const NAV_ITEMS = admin
+    ? [...NAV_ITEMS_BASE.slice(0, 5), NAV_ITEM_COMBOS, NAV_ITEMS_BASE[5]]
+    : NAV_ITEMS_BASE;
 
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[260px] flex-col overflow-hidden border-r border-[rgba(130,170,150,0.12)] bg-[#050B12] lg:flex">

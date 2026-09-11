@@ -7,6 +7,9 @@ import { api } from "@/lib/api";
 import { over25DisplayProbability } from "@/lib/probabilities";
 import { Logo } from "@/components/layout/Logo";
 import { MatchCard } from "@/components/matches/MatchCard";
+import { useUserEmail } from "@/components/providers/UserProvider";
+import { isAdmin } from "@/lib/admin";
+import { BankrollControl } from "@/components/bankroll/BankrollControl";
 
 type SelectedDay = "today" | "tomorrow";
 
@@ -78,6 +81,8 @@ export function SmartSimClient({ matches, resultMatches, error }: { matches: Mat
     };
   }, [selectedDay]);
 
+  const userEmail = useUserEmail();
+  const admin = isAdmin(userEmail);
   const label = selectedDay === "today" ? "Sélections du jour" : "Sélections de demain";
   const resultPicks = byResultConfidence(dayResultMatches);
   const over25Picks = byOver25(dayMatches);
@@ -92,6 +97,16 @@ export function SmartSimClient({ matches, resultMatches, error }: { matches: Mat
         <div className="rounded-2xl border border-danger/30 bg-danger/10 p-4 font-mono text-sm text-danger">
           {dayError}
         </div>
+      )}
+
+      {admin && userEmail && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[rgba(123,92,255,0.24)] bg-[rgba(123,92,255,0.06)] px-4 py-3">
+          <div className="text-xs">
+            <div className="font-bold text-fg">Bankroll de référence</div>
+            <div className="text-fg-muted">Les mises Kelly (★ Value) s'ajustent instantanément.</div>
+          </div>
+          <BankrollControl userEmail={userEmail} compact />
+        </section>
       )}
 
       {!dayError && (

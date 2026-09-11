@@ -105,9 +105,11 @@ export function MatchCard({
                 }`}
               >
                 ★ {compact ? "SS" : "Smart Sim"}
-                {!compact && kellyPct > 0 && (
-                  <span className="ml-1 opacity-80">
-                    {kellyEur != null ? `${kellyEur} ${bankroll?.currency || "€"}` : `${Math.round(kellyPct * 100)}%`}
+                {kellyPct > 0 && isAdmin(userEmail) && (
+                  <span className={compact ? "ml-0.5 opacity-90" : "ml-1 opacity-80"}>
+                    {kellyEur != null
+                      ? `${kellyEur}${bankroll?.currency === "EUR" ? "€" : bankroll?.currency === "USD" ? "$" : bankroll?.currency === "GBP" ? "£" : ` ${bankroll?.currency || ""}`}`
+                      : `${(kellyPct * 100).toFixed(1)}%`}
                   </span>
                 )}
               </span>
