@@ -85,35 +85,71 @@ function combinations<T>(arr: T[], k: number): T[][] {
   return out;
 }
 
-function buildCombos(candidates: Leg[]): Combo[] {
+type ComboBucket = { size: 2 | 3 | 4; combos: Combo[] };
+
+function buildBuckets(candidates: Leg[]): ComboBucket[] {
   if (candidates.length < 2) return [];
-  // Keep only positive-edge legs (prob * odd > 1)
-  const positive = candidates.filter((l) => l.prob * l.odd > 1);
-  const pool = (positive.length >= 3 ? positive : candidates).slice(0, 10);
-  // Group by fixture to avoid duplicating same match
-  const fixtureIds = new Set<string>();
-  const dedup: Leg[] = [];
-  for (const l of pool) {
-    if (fixtureIds.has(l.match.fixture_id)) continue;
-    fixtureIds.add(l.match.fixture_id);
-    dedup.push(l);
+  // Dedup by fixture, keep best positive-edge leg per match
+  const byFixture = new Map<string, Leg>();
+  for (const l of candidates) {
+    const prev = byFixture.get(l.match.fixture_id);
+    const edge = l.prob * l.odd - 1;
+    const prevEdge = prev ? prev.prob * prev.odd - 1 : -Infinity;
+    if (edge > prevEdge) byFixture.set(l.match.fixture_id, l);
   }
-  const sizes = [3, 4].filter((k) => k <= dedup.length);
-  if (sizes.length === 0 && dedup.length >= 2) sizes.push(dedup.length);
-  const allCombos: Combo[] = [];
-  for (const k of sizes) {
-    for (const legs of combinations(dedup, k)) {
+  const positive = [...byFixture.values()].filter((l) => l.prob * l.odd > 1);
+  const pool = (positive.length >= 2 ? positive : [...byFixture.values()])
+    .sort((a, b) => b.prob * b.odd - a.prob * a.odd)
+    .slice(0, 10);
+
+  const build = (k: 2 | 3 | 4): Combo[] => {
+    if (pool.length < k) return [];
+    const out: Combo[] = [];
+    for (const legs of combinations(pool, k)) {
       const jointProb = legs.reduce((acc, l) => acc * l.prob, 1);
       const combinedOdd = legs.reduce((acc, l) => acc * l.odd, 1);
       const ev = jointProb * combinedOdd - 1;
       if (ev <= 0) continue;
       const kellyPct = fractionalKelly(jointProb, combinedOdd);
-      allCombos.push({ legs, jointProb, combinedOdd, ev, kellyPct });
+      out.push({ legs, jointProb, combinedOdd, ev, kellyPct });
     }
-  }
-  // Sort by EV desc, keep top 6
-  return allCombos.sort((a, b) => b.ev - a.ev).slice(0, 6);
+    return out;
+  };
+
+  // 2 legs → prefer high joint probability (safer bets)
+  const twos = build(2).sort((a, b) => b.jointProb - a.jointProb).slice(0, 3);
+  // 3 legs → balanced (sort by EV)
+  const threes = build(3).sort((a, b) => b.ev - a.ev).slice(0, 3);
+  // 4 legs → fun (highest combined odd with positive EV)
+  const fours = build(4).sort((a, b) => b.combinedOdd - a.combinedOdd).slice(0, 2);
+
+  return [
+    { size: 2, combos: twos },
+    { size: 3, combos: threes },
+    { size: 4, combos: fours },
+  ].filter((b) => b.combos.length > 0) as ComboBucket[];
 }
+
+const BUCKET_META: Record<2 | 3 | 4, { title: string; subtitle: string; tone: string; borderTone: string }> = {
+  2: {
+    title: "Doubles sûrs",
+    subtitle: "Deux jambes à forte probabilité — la couche la plus régulière.",
+    tone: "text-[#35E75A]",
+    borderTone: "border-[rgba(53,231,90,0.24)] bg-[rgba(53,231,90,0.05)]",
+  },
+  3: {
+    title: "Triples équilibrés",
+    subtitle: "Trois matchs — meilleur ratio valeur / risque.",
+    tone: "text-[#F5C542]",
+    borderTone: "border-[rgba(245,197,66,0.24)] bg-[rgba(245,197,66,0.05)]",
+  },
+  4: {
+    title: "Combos fun",
+    subtitle: "Quatre matchs — cote élevée, à jouer très petit.",
+    tone: "text-[#B7A2FF]",
+    borderTone: "border-[rgba(123,92,255,0.28)] bg-[rgba(123,92,255,0.06)]",
+  },
+};
 
 export function CombosClient({ userEmail }: { userEmail: string }) {
   const [day, setDay] = useState<Day>("today");
@@ -133,7 +169,8 @@ export function CombosClient({ userEmail }: { userEmail: string }) {
   }, [day]);
 
   const candidates = useMemo(() => matches.map(legFromMatch).filter((l): l is Leg => !!l), [matches]);
-  const combos = useMemo(() => buildCombos(candidates), [candidates]);
+  const buckets = useMemo(() => buildBuckets(candidates), [candidates]);
+  const totalCombos = buckets.reduce((acc, b) => acc + b.combos.length, 0);
 
   const currency = bankroll?.currency || "EUR";
   const bkAmount = bankroll?.amount || 0;
@@ -186,19 +223,33 @@ export function CombosClient({ userEmail }: { userEmail: string }) {
         </div>
       )}
 
-      {!loading && candidates.length >= 2 && combos.length === 0 && (
+      {!loading && candidates.length >= 2 && totalCombos === 0 && (
         <div className="rounded-2xl border border-white/[0.06] bg-[rgba(5,12,18,0.58)] px-4 py-8 text-center text-sm text-fg-muted">
           Aucun combo à valeur positive détecté ({candidates.length} candidats analysés).
         </div>
       )}
 
-      {combos.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {combos.map((combo, i) => (
-            <ComboCard key={i} combo={combo} rank={i + 1} bankroll={bkAmount} currency={currency} />
-          ))}
-        </div>
-      )}
+      {buckets.map((bucket) => {
+        const meta = BUCKET_META[bucket.size];
+        return (
+          <section key={bucket.size} className={`overflow-hidden rounded-[22px] border ${meta.borderTone} p-4`}>
+            <header className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className={`text-lg font-extrabold tracking-tight ${meta.tone}`}>{meta.title}</h2>
+                <p className="text-xs text-fg-muted">{meta.subtitle}</p>
+              </div>
+              <span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-fg-muted">
+                {bucket.combos.length} combo{bucket.combos.length > 1 ? "s" : ""}
+              </span>
+            </header>
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+              {bucket.combos.map((combo, i) => (
+                <ComboCard key={i} combo={combo} rank={i + 1} bankroll={bkAmount} currency={currency} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
 
       <p className="rounded-2xl border border-white/[0.05] bg-white/[0.02] p-3 text-xs leading-relaxed text-fg-muted">
         <Info size={12} className="mr-1 inline-block text-[#B7A2FF]" />
@@ -211,19 +262,22 @@ export function CombosClient({ userEmail }: { userEmail: string }) {
 }
 
 function ComboCard({ combo, rank, bankroll, currency }: { combo: Combo; rank: number; bankroll: number; currency: string }) {
-  const stakeEur = bankroll > 0 ? Math.round(bankroll * combo.kellyPct * 10) / 10 : null;
-  const potentialWin = stakeEur != null ? Math.round(stakeEur * combo.combinedOdd * 10) / 10 : null;
+  // Minimum stake floor of 1 unit to avoid 0.x tiny stakes when bankroll set
+  const rawStake = bankroll > 0 ? bankroll * combo.kellyPct : 0;
+  const stake = bankroll > 0 ? Math.max(1, Math.round(rawStake * 10) / 10) : null;
+  const potentialReturn = stake != null ? Math.round(stake * combo.combinedOdd * 10) / 10 : null;
+  const potentialProfit = stake != null && potentialReturn != null ? Math.round((potentialReturn - stake) * 10) / 10 : null;
   const symbol = currency === "EUR" ? "€" : currency === "USD" ? "$" : currency === "GBP" ? "£" : ` ${currency}`;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[rgba(123,92,255,0.24)] bg-[rgba(10,18,24,0.82)] shadow-[0_18px_50px_rgba(0,0,0,0.28)]">
-      <header className="flex items-center justify-between border-b border-white/[0.06] bg-[rgba(123,92,255,0.06)] px-4 py-3">
+    <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[rgba(10,18,24,0.82)] shadow-[0_18px_50px_rgba(0,0,0,0.28)]">
+      <header className="flex items-center justify-between border-b border-white/[0.06] bg-black/25 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#7B5CFF] text-xs font-black text-white">#{rank}</span>
-          <span className="text-sm font-bold text-fg">Combo {combo.legs.length} matchs</span>
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.08] text-[10px] font-black text-fg">#{rank}</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-fg-muted">{combo.legs.length} jambes</span>
         </div>
-        <div className="flex items-center gap-1 rounded-full bg-[#35E75A]/12 px-2 py-1 text-xs font-black text-[#35E75A]">
-          <TrendingUp size={12} /> EV +{(combo.ev * 100).toFixed(1)}%
+        <div className="flex items-center gap-1 rounded-full bg-[#35E75A]/12 px-2 py-0.5 text-[11px] font-black text-[#35E75A]">
+          <TrendingUp size={11} /> EV +{(combo.ev * 100).toFixed(1)}%
         </div>
       </header>
 
@@ -232,22 +286,21 @@ function ComboCard({ combo, rank, bankroll, currency }: { combo: Combo; rank: nu
           <li key={leg.match.fixture_id}>
             <Link
               href={`/match/${leg.match.fixture_id}?source=combos`}
-              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]"
+              className="flex items-center gap-2.5 px-3.5 py-2.5 transition-colors hover:bg-white/[0.03]"
             >
               <TeamLogo team={leg.match.home_team} />
-              <span className="text-xs font-semibold text-fg-muted">vs</span>
               <TeamLogo team={leg.match.away_team} />
-              <div className="ml-2 min-w-0 flex-1">
-                <div className="truncate text-sm font-bold text-fg">
+              <div className="ml-1 min-w-0 flex-1">
+                <div className="truncate text-[13px] font-bold text-fg">
                   {leg.match.home_team.name} — {leg.match.away_team.name}
                 </div>
-                <div className="text-[11px] text-fg-muted">{leg.match.league.flag} {leg.match.league.name}</div>
+                <div className="text-[10px] text-fg-muted">{leg.match.league.flag} {leg.match.league.name}</div>
               </div>
               <div className="text-right">
                 <div className={`text-[10px] font-black uppercase tracking-wider ${leg.isValue ? "text-[#B7A2FF]" : "text-[#F5C542]"}`}>
                   {leg.marketLabel}
                 </div>
-                <div className="text-xs font-bold text-fg">
+                <div className="text-[11px] font-bold text-fg">
                   {Math.round(leg.prob * 100)}% <span className="text-fg-muted">@ {leg.odd.toFixed(2)}</span>
                 </div>
               </div>
@@ -256,24 +309,37 @@ function ComboCard({ combo, rank, bankroll, currency }: { combo: Combo; rank: nu
         ))}
       </ul>
 
-      <footer className="grid grid-cols-3 gap-2 border-t border-white/[0.06] bg-black/20 px-4 py-3 text-center">
-        <div>
-          <div className="text-[9px] font-bold uppercase tracking-wider text-fg-muted">Proba jointe</div>
-          <div className="text-sm font-black text-fg">{(combo.jointProb * 100).toFixed(1)}%</div>
-        </div>
-        <div>
-          <div className="text-[9px] font-bold uppercase tracking-wider text-fg-muted">Cote combinée</div>
-          <div className="text-sm font-black text-[#F5C542]">{combo.combinedOdd.toFixed(2)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] font-bold uppercase tracking-wider text-fg-muted">Mise conseillée</div>
-          <div className="text-sm font-black text-[#B7A2FF]">
-            {stakeEur != null ? `${stakeEur}${symbol}` : `${(combo.kellyPct * 100).toFixed(2)}%`}
+      <footer className="border-t border-white/[0.06] bg-black/25 px-4 py-3">
+        <div className="mb-2 grid grid-cols-2 gap-2 text-center">
+          <div>
+            <div className="text-[9px] font-bold uppercase tracking-wider text-fg-muted">Proba jointe</div>
+            <div className="text-sm font-black text-fg">{(combo.jointProb * 100).toFixed(1)}%</div>
           </div>
-          {potentialWin != null && (
-            <div className="text-[10px] font-semibold text-[#35E75A]">→ {potentialWin}{symbol}</div>
-          )}
+          <div>
+            <div className="text-[9px] font-bold uppercase tracking-wider text-fg-muted">Cote combinée</div>
+            <div className="text-sm font-black text-[#F5C542]">{combo.combinedOdd.toFixed(2)}</div>
+          </div>
         </div>
+        {stake != null ? (
+          <div className="rounded-lg border border-[#7B5CFF]/25 bg-[#7B5CFF]/8 px-3 py-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-bold uppercase tracking-wider text-[#B7A2FF]">Mise conseillée</div>
+                <div className="text-lg font-black text-fg">{stake}{symbol}</div>
+                <div className="text-[10px] text-fg-muted">{(combo.kellyPct * 100).toFixed(2)}% bankroll</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[9px] font-bold uppercase tracking-wider text-[#35E75A]">Si gagné</div>
+                <div className="text-lg font-black text-[#35E75A]">{potentialReturn}{symbol}</div>
+                <div className="text-[10px] font-semibold text-[#35E75A]/80">gain net +{potentialProfit}{symbol}</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-center text-[11px] text-fg-muted">
+            Renseigne ta bankroll pour voir la mise et le gain.
+          </div>
+        )}
       </footer>
     </section>
   );
