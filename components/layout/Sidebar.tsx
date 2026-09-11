@@ -15,7 +15,7 @@ const NAV_ITEMS_BASE = [
   { href: "/settings", label: "Paramètres", icon: Settings },
 ] as const;
 
-const NAV_ITEM_COMBOS = { href: "/combos", label: "Combos bankroll", icon: Layers, adminOnly: true } as const;
+const NAV_ITEM_COMBOS = { href: "/combos", label: "Gestion bankroll", icon: Layers, adminOnly: true } as const;
 
 type Props = { userEmail?: string | null };
 

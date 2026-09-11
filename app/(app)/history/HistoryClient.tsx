@@ -194,6 +194,7 @@ export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState<PeriodKey>("7d");
   const [periodOpen, setPeriodOpen] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const filteredItems = useMemo(() => {
     const now = new Date();
@@ -348,27 +349,39 @@ export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
         })}
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <button className="inline-flex h-12 w-full items-center justify-between rounded-[14px] border border-white/[0.08] bg-[rgba(7,16,24,0.72)] px-4 text-sm font-semibold text-[#F3F6F7] sm:w-[320px]">
-          <span className="inline-flex items-center gap-3">
-            <CalendarDays size={17} className="text-[rgba(243,246,247,0.62)]" />
-            Toutes les dates
-          </span>
-          <ChevronDown size={16} className="text-[rgba(243,246,247,0.58)]" />
+      {!showDetails ? (
+        <button
+          type="button"
+          onClick={() => setShowDetails(true)}
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-[14px] border border-[rgba(53,231,90,0.22)] bg-[rgba(53,231,90,0.06)] text-sm font-black uppercase tracking-wider text-[#35E75A] transition-colors hover:bg-[rgba(53,231,90,0.10)]"
+        >
+          Voir le détail des matchs
+          <ChevronDown size={16} />
         </button>
-
-        <label className="flex h-12 w-full items-center gap-3 rounded-[14px] border border-white/[0.08] bg-[rgba(7,16,24,0.72)] px-4 lg:max-w-[470px]">
-          <Search size={19} className="text-[rgba(243,246,247,0.62)]" />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Rechercher un match, une équipe..."
-            className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#F3F6F7] outline-none placeholder:text-[rgba(243,246,247,0.38)]"
-          />
-        </label>
-      </div>
-
-      <HistoryTable activeTab={activeTab} rows={rows} />
+      ) : (
+        <>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <button
+              type="button"
+              onClick={() => setShowDetails(false)}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-white/[0.08] bg-[rgba(7,16,24,0.72)] px-4 text-sm font-semibold text-[rgba(243,246,247,0.72)] sm:w-[220px]"
+            >
+              Masquer le détail
+              <ChevronDown size={16} className="rotate-180" />
+            </button>
+            <label className="flex h-12 w-full items-center gap-3 rounded-[14px] border border-white/[0.08] bg-[rgba(7,16,24,0.72)] px-4 lg:max-w-[470px]">
+              <Search size={19} className="text-[rgba(243,246,247,0.62)]" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Rechercher un match, une équipe..."
+                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#F3F6F7] outline-none placeholder:text-[rgba(243,246,247,0.38)]"
+              />
+            </label>
+          </div>
+          <HistoryTable activeTab={activeTab} rows={rows} />
+        </>
+      )}
     </div>
   );
 }
