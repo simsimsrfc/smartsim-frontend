@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Wallet, Check } from "lucide-react";
 import { api } from "@/lib/api";
-import { invalidateBankroll } from "@/lib/useBankroll";
+import { primeBankroll } from "@/lib/useBankroll";
 
 type Props = {
   userEmail: string;
@@ -35,7 +35,7 @@ export function BankrollControl({ userEmail, compact = false, label = "Bankroll"
     setStatus("saving");
     try {
       await api.setBankroll(userEmail, val, currency);
-      invalidateBankroll();
+      primeBankroll(userEmail, val, currency);
       setStatus("saved");
       setTimeout(() => setStatus("idle"), 1500);
     } catch { setStatus("error"); }
