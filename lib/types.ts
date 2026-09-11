@@ -50,6 +50,17 @@ export type MatchSummary = {
     reason?: string;
     kelly_pct?: number;
     kelly_market?: string;
+    patterns?: Array<{ name: string; reason: string; confidence: number }>;
+    patterns_full?: Array<{
+      name: string; reason: string; confidence: number;
+      lam_home_mul?: number; lam_away_mul?: number; winner_bias?: number;
+    }>;
+    patterns_summary?: {
+      count: number;
+      total_lam_home_mul: number;
+      total_lam_away_mul: number;
+      total_winner_bias: number;
+    } | null;
   } | null;
   label: string;
   odds: { over_25: number | null; over_15: number | null; btts: number | null };

@@ -10,6 +10,7 @@ import { MatchContextCard } from "./MatchContextCard";
 import { NarrativeSummaryCard } from "./NarrativeSummaryCard";
 import { SmartSummaryCard } from "./SmartSummaryCard";
 import { ContextNarrativeCard } from "./ContextNarrativeCard";
+import { PatternsCard } from "./PatternsCard";
 import { MatchDisclaimer } from "./MatchDisclaimer";
 import { getAnalysisViewConfig, getMatchAnalysisTabs, getProbabilityItems } from "./matchAnalysisConfig";
 import type { MatchAnalysisSource, MatchAnalysisView } from "./types";
@@ -44,6 +45,7 @@ export function MatchAnalysisPage({
         </div>
         <WhyAnalysisCard title={viewConfig.whyTitle} signals={viewConfig.signals} />
         <MatchContextCard match={match} />
+        <PatternsCard match={match} />
         <ContextNarrativeCard context={match.context} />
         <NarrativeSummaryCard title={viewConfig.summaryTitle} text={viewConfig.summary} />
       </div>

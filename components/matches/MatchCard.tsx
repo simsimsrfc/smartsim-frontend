@@ -73,6 +73,8 @@ export function MatchCard({
   const kellyEur = (isAdmin(userEmail) && bankroll?.amount && kellyPct > 0)
     ? Math.round(bankroll.amount * kellyPct * 10) / 10
     : null;
+  const patternsCount = match.smart_bet?.patterns?.length || 0;
+  const showPatternBadge = isAdmin(userEmail) && patternsCount >= 2;
 
   return (
     <Link
@@ -121,6 +123,16 @@ export function MatchCard({
                 }`}
               >
                 {compact ? "SS" : "Smart Sim"}
+              </span>
+            )}
+            {showPatternBadge && (
+              <span
+                title={`${patternsCount} récurrences détectées — voir la fiche match`}
+                className={`inline-flex items-center gap-0.5 rounded-full border border-[#7B5CFF]/40 bg-[#7B5CFF]/10 font-black uppercase tracking-[0.08em] text-[#B7A2FF] ${
+                  compact ? "px-1.5 py-[2px] text-[8px]" : "px-2 py-0.5 text-[10px]"
+                }`}
+              >
+                {patternsCount}★
               </span>
             )}
             <span
