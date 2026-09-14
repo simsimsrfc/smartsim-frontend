@@ -48,6 +48,9 @@ export type HistoryApiItem = {
     confidence?: "faible" | "moyenne" | "forte";
   };
   result_selection?: MatchSummary["result_selection"];
+  is_smart_bet?: boolean;
+  is_value?: boolean;
+  kelly_market?: string;
 };
 
 export const api = {

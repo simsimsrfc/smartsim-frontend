@@ -6,22 +6,20 @@ import {
   CheckCircle2,
   ChevronDown,
   Search,
+  Star,
   Trophy,
   X,
 } from "lucide-react";
 import { CountryFlag } from "@/components/ui/CountryFlag";
 import type { HistoryApiItem } from "@/lib/api";
 
-type HistoryTab = "over25" | "smartResult" | "result";
+type CategoryKey = "ss_over25" | "ss_over25_plus" | "ss_result" | "result";
 type Status = "won" | "lost" | "pending" | "void";
 type ResultCode = "1" | "N" | "2" | "1N" | "N2" | "12";
 
-type Team = {
-  name: string;
-  logo: string;
-};
+type Team = { name: string; logo: string };
 
-type BaseHistoryItem = {
+type BaseRow = {
   id: string;
   date: string;
   time: string;
@@ -35,68 +33,78 @@ type BaseHistoryItem = {
   status: Status;
 };
 
-type Over25Item = BaseHistoryItem & {
-  kind: "over25";
-  probability: number;
-  goals: number;
-};
-
-type SmartResultItem = BaseHistoryItem & {
-  kind: "smartResult";
-  selection: ResultCode;
-  confidence: number;
-  selectionLabel: string;
-};
-
-type ResultItem = BaseHistoryItem & {
+type Over25Row = BaseRow & { kind: "over25"; probability: number; goals: number };
+type ResultRow = BaseRow & {
   kind: "result";
-  type: "Smart Sim" | "Avis simple" | "Hors Smart Sim";
   selection: ResultCode;
-  confidence: number;
   selectionLabel: string;
+  confidence: number;
 };
 
-const TABS: Array<{
-  id: HistoryTab;
+type Row = Over25Row | ResultRow;
+
+type Category = {
+  key: CategoryKey;
   title: string;
   subtitle: string;
   icon: ReactNode;
-}> = [
+  accent: "green" | "violet" | "gold";
+  kind: "over25" | "result";
+};
+
+const CATEGORIES: Category[] = [
   {
-    id: "over25",
+    key: "ss_over25",
     title: "Smart Sim +2,5",
-    subtitle: "Historique des sélections +2,5 buts",
+    subtitle: "Sélections +2,5 buts basées sur une évidence statistique.",
     icon: <SmartBallIcon />,
+    accent: "green",
+    kind: "over25",
   },
   {
-    id: "smartResult",
+    key: "ss_over25_plus",
+    title: "SS+ +2,5 (Value)",
+    subtitle: "Sélections +2,5 déclenchées comme value bets (★) — modèle > marché.",
+    icon: <Star size={22} strokeWidth={2.4} />,
+    accent: "violet",
+    kind: "over25",
+  },
+  {
+    key: "ss_result",
     title: "Smart Sim Résultat",
-    subtitle: "Historique des sélections résultat Smart Sim",
-    icon: <Trophy size={28} />,
+    subtitle: "Picks de résultat portés par un signal Smart Sim.",
+    icon: <Trophy size={24} />,
+    accent: "gold",
+    kind: "result",
   },
   {
-    id: "result",
-    title: "Tous les matchs — Résultat",
-    subtitle: "Historique de tous les avis résultat (hors Smart Sim)",
-    icon: <Trophy size={28} />,
+    key: "result",
+    title: "Autres avis résultat",
+    subtitle: "Avis résultat sur les matchs hors Smart Sim.",
+    icon: <Trophy size={24} />,
+    accent: "gold",
+    kind: "result",
   },
 ];
 
-const TABLE_META: Record<HistoryTab, { title: string; subtitle: string; icon: ReactNode }> = {
-  over25: {
-    title: "Historique Smart Sim +2,5",
-    subtitle: "Les matchs recommandés +2,5 buts",
-    icon: <SmartBallIcon />,
+const ACCENT_STYLES: Record<Category["accent"], { border: string; ring: string; text: string; bg: string }> = {
+  green: {
+    border: "border-[rgba(53,231,90,0.28)]",
+    ring: "border-[rgba(53,231,90,0.24)] bg-[rgba(53,231,90,0.10)] text-[#35E75A]",
+    text: "text-[#35E75A]",
+    bg: "bg-[rgba(53,231,90,0.06)]",
   },
-  smartResult: {
-    title: "Historique Smart Sim Résultat",
-    subtitle: "Les sélections résultat les plus fortes",
-    icon: <Trophy size={26} />,
+  violet: {
+    border: "border-[rgba(123,92,255,0.35)]",
+    ring: "border-[rgba(123,92,255,0.32)] bg-[rgba(123,92,255,0.12)] text-[#B7A2FF]",
+    text: "text-[#B7A2FF]",
+    bg: "bg-[rgba(123,92,255,0.06)]",
   },
-  result: {
-    title: "Historique Tous les matchs — Résultat",
-    subtitle: "Tous les avis résultat des matchs hors Smart Sim",
-    icon: <Trophy size={26} />,
+  gold: {
+    border: "border-[rgba(245,197,66,0.28)]",
+    ring: "border-[rgba(245,197,66,0.24)] bg-[rgba(245,197,66,0.10)] text-[#F5C542]",
+    text: "text-[#F5C542]",
+    bg: "bg-[rgba(245,197,66,0.06)]",
   },
 };
 
@@ -118,35 +126,30 @@ function formatDate(value: string): string {
   if (!value) return "--";
   try {
     return new Date(value).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    timeZone: "Europe/Paris"});
-  } catch {
-    return value.slice(0, 10);
-  }
+      day: "2-digit", month: "2-digit", year: "numeric",
+      timeZone: "Europe/Paris",
+    });
+  } catch { return value.slice(0, 10); }
 }
 
 function formatTime(value: string): string {
   if (!value) return "--:--";
   try {
     return new Date(value).toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    timeZone: "Europe/Paris"});
-  } catch {
-    return "--:--";
-  }
+      hour: "2-digit", minute: "2-digit",
+      timeZone: "Europe/Paris",
+    });
+  } catch { return "--:--"; }
 }
 
-function percent(value: number | null | undefined): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
-  return Math.round(value * 100);
+function percent(v: number | null | undefined): number {
+  if (typeof v !== "number" || !Number.isFinite(v)) return 0;
+  return Math.round(v * 100);
 }
 
-function mapBase(item: HistoryApiItem): BaseHistoryItem {
+function mapBase(item: HistoryApiItem): BaseRow {
   return {
-    id: `${item.type}:${item.fixture_id}`,
+    id: `${item.type}:${item.fixture_id}:${item.is_value ? "v" : "e"}`,
     date: formatDate(item.date),
     time: formatTime(item.date),
     league: item.league.name || "Ligue",
@@ -160,7 +163,7 @@ function mapBase(item: HistoryApiItem): BaseHistoryItem {
   };
 }
 
-function mapOver25(item: HistoryApiItem): Over25Item {
+function mapOver25(item: HistoryApiItem): Over25Row {
   const totalGoals = (item.score.home ?? 0) + (item.score.away ?? 0);
   return {
     ...mapBase(item),
@@ -171,11 +174,10 @@ function mapOver25(item: HistoryApiItem): Over25Item {
   };
 }
 
-function mapResult(item: HistoryApiItem): ResultItem {
+function mapResult(item: HistoryApiItem): ResultRow {
   return {
     ...mapBase(item),
     kind: "result",
-    type: "Avis simple",
     selection: (item.selection.pick || "1") as ResultCode,
     selectionLabel: item.selection.label || "Avis résultat",
     confidence: percent(item.selection.probability),
@@ -190,11 +192,12 @@ const PERIOD_OPTIONS: Array<{ key: PeriodKey; label: string; days: number | null
 ];
 
 export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
-  const [activeTab, setActiveTab] = useState<HistoryTab>("over25");
-  const [search, setSearch] = useState("");
   const [period, setPeriod] = useState<PeriodKey>("7d");
   const [periodOpen, setPeriodOpen] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
+  const [expanded, setExpanded] = useState<Set<CategoryKey>>(new Set());
+  const [search, setSearch] = useState<Record<CategoryKey, string>>({
+    ss_over25: "", ss_over25_plus: "", ss_result: "", result: "",
+  });
 
   const filteredItems = useMemo(() => {
     const now = new Date();
@@ -205,26 +208,34 @@ export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
       if (!it.date) return false;
       const d = new Date(it.date);
       if (Number.isNaN(d.getTime())) return false;
-      if (d.getTime() > todayEnd.getTime()) return false; // exclude future matches
+      if (d.getTime() > todayEnd.getTime()) return false;
       if (minDate && d.getTime() < minDate.getTime()) return false;
       return true;
     });
   }, [items, period]);
 
-  const historyData = useMemo(() => ({
-    over25: filteredItems.filter((item) => item.type === "smart-over25").map(mapOver25),
-    smartResult: filteredItems.filter((item) => item.type === "smart-result").map((item) => ({
-      ...mapBase(item),
-      kind: "smartResult" as const,
-      selection: (item.selection.pick || "1") as ResultCode,
-      selectionLabel: item.selection.label || "Avis résultat",
-      confidence: percent(item.selection.probability),
-    })),
-    result: filteredItems.filter((item) => item.type === "result").map(mapResult),
-  }), [filteredItems]);
+  // Split into 4 buckets
+  const buckets = useMemo(() => {
+    const ss_over25: Row[] = [];
+    const ss_over25_plus: Row[] = [];
+    const ss_result: Row[] = [];
+    const result: Row[] = [];
+    for (const it of filteredItems) {
+      if (it.type === "smart-over25") {
+        // Value bet (SS+) → uses kelly_market or is_value flag
+        if (it.is_value) ss_over25_plus.push(mapOver25(it));
+        else ss_over25.push(mapOver25(it));
+      } else if (it.type === "smart-result") {
+        ss_result.push(mapResult(it));
+      } else if (it.type === "result") {
+        result.push(mapResult(it));
+      }
+    }
+    return { ss_over25, ss_over25_plus, ss_result, result } as Record<CategoryKey, Row[]>;
+  }, [filteredItems]);
 
   const stats = useMemo(() => {
-    const compute = (rows: BaseHistoryItem[]) => {
+    const compute = (rows: BaseRow[]) => {
       const won = rows.filter((r) => r.status === "won").length;
       const lost = rows.filter((r) => r.status === "lost").length;
       const pending = rows.filter((r) => r.status === "pending").length;
@@ -233,40 +244,28 @@ export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
       return { won, lost, pending, settled, rate, total: rows.length };
     };
     return {
-      over25: compute(historyData.over25),
-      smartResult: compute(historyData.smartResult),
-      result: compute(historyData.result),
-    };
-  }, [historyData]);
+      ss_over25: compute(buckets.ss_over25),
+      ss_over25_plus: compute(buckets.ss_over25_plus),
+      ss_result: compute(buckets.ss_result),
+      result: compute(buckets.result),
+    } as Record<CategoryKey, ReturnType<typeof compute>>;
+  }, [buckets]);
 
-  const rows = useMemo(() => {
-    const source =
-      activeTab === "over25"
-        ? historyData.over25
-        : activeTab === "smartResult"
-          ? historyData.smartResult
-          : historyData.result;
-
-    const query = search.trim().toLowerCase();
-    if (!query) return source;
-
-    return source.filter((item) =>
-      [item.league, item.country, item.home.name, item.away.name]
-        .join(" ")
-        .toLowerCase()
-        .includes(query)
-    );
-  }, [activeTab, historyData, search]);
+  function toggle(key: CategoryKey) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
 
   return (
-    <div className="min-w-0 w-full max-w-full space-y-6 overflow-x-hidden">
+    <div className="min-w-0 w-full max-w-full space-y-5 overflow-x-hidden">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-[-0.05em] text-[#F3F6F7] md:text-5xl">
-            Historique
-          </h1>
+          <h1 className="text-4xl font-extrabold tracking-[-0.05em] text-[#F3F6F7] md:text-5xl">Historique</h1>
           <p className="mt-3 text-base leading-relaxed text-[rgba(243,246,247,0.72)]">
-            Retrouvez l'historique complet de vos sélections et avis passés.
+            Chaque catégorie affiche son taux de réussite. Clique sur « Voir le détail » pour dérouler ses matchs.
           </p>
         </div>
         <div className="relative">
@@ -298,148 +297,158 @@ export function HistoryClient({ items }: { items: HistoryApiItem[] }) {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {TABS.map((tab) => {
-          const active = activeTab === tab.id;
-          const s = stats[tab.id];
-          const rateColor = s.rate == null ? "text-[rgba(243,246,247,0.55)]"
-            : s.rate >= 60 ? "text-[#35E75A]"
-            : s.rate >= 45 ? "text-[#D8AF3A]"
-            : "text-[#E85B5B]";
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`group flex min-h-[132px] flex-col gap-3 rounded-[18px] border p-5 text-left transition-all ${
-                active
-                  ? "border-[rgba(53,231,90,0.45)] bg-[radial-gradient(circle_at_left,rgba(53,231,90,0.18),transparent_42%),rgba(7,16,24,0.86)] shadow-[0_18px_48px_rgba(53,231,90,0.08)]"
-                  : "border-white/[0.08] bg-[rgba(7,16,24,0.72)] hover:border-[rgba(53,231,90,0.24)]"
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <span
-                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition-colors ${
-                    active
-                      ? "border-[rgba(53,231,90,0.28)] bg-[rgba(53,231,90,0.13)] text-[#35E75A]"
-                      : "border-white/[0.10] bg-white/[0.04] text-[rgba(243,246,247,0.72)] group-hover:text-[#35E75A]"
-                  }`}
-                >
-                  {tab.icon}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block text-lg font-extrabold tracking-[-0.03em] ${active ? "text-[#F3F6F7]" : "text-[rgba(243,246,247,0.86)]"}`}>
-                    {tab.title}
-                  </span>
-                  <span className="mt-1 block text-xs leading-snug text-[rgba(243,246,247,0.62)]">{tab.subtitle}</span>
-                </span>
-                <span className={`flex flex-col items-end whitespace-nowrap ${rateColor}`}>
-                  <span className="text-2xl font-black leading-none">{s.rate == null ? "—" : `${s.rate}%`}</span>
-                  <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[rgba(243,246,247,0.55)]">Réussite</span>
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/[0.05] pt-3 text-[11px] font-bold uppercase tracking-[0.06em]">
-                <span className="text-[#35E75A]">✓ {s.won} gagné{s.won > 1 ? "s" : ""}</span>
-                <span className="text-[#E85B5B]">✗ {s.lost} perdu{s.lost > 1 ? "s" : ""}</span>
-                <span className="text-[rgba(243,246,247,0.55)]">⧗ {s.pending} en attente</span>
-                <span className="ml-auto text-[rgba(243,246,247,0.42)]">{s.total} total</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {!showDetails ? (
-        <button
-          type="button"
-          onClick={() => setShowDetails(true)}
-          className="flex h-14 w-full items-center justify-center gap-2 rounded-[14px] border border-[rgba(53,231,90,0.22)] bg-[rgba(53,231,90,0.06)] text-sm font-black uppercase tracking-wider text-[#35E75A] transition-colors hover:bg-[rgba(53,231,90,0.10)]"
-        >
-          Voir le détail des matchs
-          <ChevronDown size={16} />
-        </button>
-      ) : (
-        <>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <button
-              type="button"
-              onClick={() => setShowDetails(false)}
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-white/[0.08] bg-[rgba(7,16,24,0.72)] px-4 text-sm font-semibold text-[rgba(243,246,247,0.72)] sm:w-[220px]"
-            >
-              Masquer le détail
-              <ChevronDown size={16} className="rotate-180" />
-            </button>
-            <label className="flex h-12 w-full items-center gap-3 rounded-[14px] border border-white/[0.08] bg-[rgba(7,16,24,0.72)] px-4 lg:max-w-[470px]">
-              <Search size={19} className="text-[rgba(243,246,247,0.62)]" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Rechercher un match, une équipe..."
-                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#F3F6F7] outline-none placeholder:text-[rgba(243,246,247,0.38)]"
-              />
-            </label>
-          </div>
-          <HistoryTable activeTab={activeTab} rows={rows} />
-        </>
-      )}
+      {CATEGORIES.map((cat) => {
+        const rows = buckets[cat.key];
+        const s = stats[cat.key];
+        const isOpen = expanded.has(cat.key);
+        return (
+          <CategorySection
+            key={cat.key}
+            category={cat}
+            rows={rows}
+            stats={s}
+            isOpen={isOpen}
+            onToggle={() => toggle(cat.key)}
+            search={search[cat.key]}
+            setSearch={(v) => setSearch((prev) => ({ ...prev, [cat.key]: v }))}
+          />
+        );
+      })}
     </div>
   );
 }
 
-function HistoryTable({
-  activeTab,
-  rows,
+// ────────────────────────────────────────────────────────────
+// CategorySection : summary card + collapsible details
+// ────────────────────────────────────────────────────────────
+function CategorySection({
+  category, rows, stats, isOpen, onToggle, search, setSearch,
 }: {
-  activeTab: HistoryTab;
-  rows: Array<Over25Item | SmartResultItem | ResultItem>;
+  category: Category;
+  rows: Row[];
+  stats: { won: number; lost: number; pending: number; settled: number; rate: number | null; total: number };
+  isOpen: boolean;
+  onToggle: () => void;
+  search: string;
+  setSearch: (v: string) => void;
 }) {
-  const meta = TABLE_META[activeTab];
+  const acc = ACCENT_STYLES[category.accent];
+  const rateColor = stats.rate == null ? "text-[rgba(243,246,247,0.55)]"
+    : stats.rate >= 60 ? "text-[#35E75A]"
+    : stats.rate >= 45 ? "text-[#D8AF3A]"
+    : "text-[#E85B5B]";
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      [r.league, r.country, r.home.name, r.away.name].join(" ").toLowerCase().includes(q));
+  }, [rows, search]);
+
   const [visibleCount, setVisibleCount] = useState(10);
-  const visibleRows = rows.slice(0, visibleCount);
+  const visible = filteredRows.slice(0, visibleCount);
 
   return (
-    <section className="min-w-0 w-full max-w-full overflow-hidden rounded-[24px] border border-white/[0.08] bg-[rgba(7,16,24,0.82)] shadow-[0_18px_50px_rgba(0,0,0,0.26)]">
-      <div className="flex items-center gap-4 border-b border-white/[0.07] px-5 py-5 md:px-7">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[rgba(53,231,90,0.24)] bg-[rgba(53,231,90,0.10)] text-[#35E75A] shadow-[0_0_28px_rgba(53,231,90,0.10)]">
-          {meta.icon}
+    <section className={`overflow-hidden rounded-[22px] border ${acc.border} ${acc.bg}`}>
+      {/* Summary header — toujours visible */}
+      <div className="flex flex-wrap items-center gap-4 p-5">
+        <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border ${acc.ring}`}>
+          {category.icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className={`text-lg font-extrabold tracking-tight ${acc.text}`}>{category.title}</div>
+          <div className="mt-0.5 text-xs text-fg-muted">{category.subtitle}</div>
         </div>
-        <div className="min-w-0">
-          <h2 className="text-2xl font-extrabold tracking-[-0.04em] text-[#F3F6F7]">{meta.title}</h2>
-          <p className="mt-1 text-sm text-[rgba(243,246,247,0.62)]">{meta.subtitle}</p>
+        <div className={`flex flex-col items-end ${rateColor}`}>
+          <span className="text-2xl font-black leading-none">{stats.rate == null ? "—" : `${stats.rate}%`}</span>
+          <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[rgba(243,246,247,0.55)]">Réussite</span>
         </div>
       </div>
 
-      {activeTab === "over25" && <Over25Table rows={visibleRows as Over25Item[]} />}
-      {activeTab === "smartResult" && <SmartResultTable rows={visibleRows as SmartResultItem[]} />}
-      {activeTab === "result" && <ResultOpinionTable rows={visibleRows as ResultItem[]} />}
+      {/* Compact stats strip */}
+      <div className="grid grid-cols-4 gap-2 border-t border-white/[0.05] bg-black/20 px-4 py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.06em]">
+        <StatCell label="Joués" value={String(stats.total)} tone="neutral" />
+        <StatCell label="Gagnés" value={String(stats.won)} tone="good" />
+        <StatCell label="Perdus" value={String(stats.lost)} tone="bad" />
+        <StatCell label="En attente" value={String(stats.pending)} tone="muted" />
+      </div>
 
-      {visibleCount < rows.length && (
+      {/* Voir le détail button — PER CATEGORY */}
+      {stats.total > 0 && (
         <button
           type="button"
-          onClick={() => setVisibleCount((value) => value + 10)}
-          className="flex h-16 w-full items-center justify-center gap-3 border-t border-white/[0.06] text-base font-extrabold text-[#35E75A] outline-none transition-colors hover:bg-[rgba(53,231,90,0.04)] focus-visible:ring-2 focus-visible:ring-[#35E75A]/30"
+          onClick={onToggle}
+          className={`flex h-12 w-full items-center justify-center gap-2 border-t border-white/[0.05] text-xs font-black uppercase tracking-wider ${acc.text} transition-colors hover:bg-white/[0.02]`}
         >
-          Voir plus ({rows.length - visibleCount})
-          <ChevronDown size={18} />
+          {isOpen ? "Masquer le détail" : `Voir le détail (${stats.total})`}
+          <ChevronDown size={14} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
+      )}
+
+      {/* Collapsible details */}
+      {isOpen && stats.total > 0 && (
+        <div className="border-t border-white/[0.05] bg-[rgba(5,12,18,0.42)]">
+          <div className="p-4">
+            <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-white/[0.08] bg-[rgba(7,16,24,0.72)] px-3">
+              <Search size={15} className="text-fg-muted" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Filtrer par équipe ou ligue…"
+                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-fg outline-none placeholder:text-fg-muted/60"
+              />
+            </label>
+          </div>
+
+          {filteredRows.length === 0 ? (
+            <div className="px-4 pb-6 text-center text-sm text-fg-muted">Aucun match ne correspond au filtre.</div>
+          ) : (
+            <div>
+              {category.kind === "over25" ? (
+                <Over25Table rows={visible as Over25Row[]} />
+              ) : (
+                <ResultTable rows={visible as ResultRow[]} accent={acc.text} />
+              )}
+              {visibleCount < filteredRows.length && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((v) => v + 10)}
+                  className={`flex h-12 w-full items-center justify-center gap-2 border-t border-white/[0.05] text-xs font-black uppercase tracking-wider ${acc.text} hover:bg-white/[0.02]`}
+                >
+                  Voir plus ({filteredRows.length - visibleCount})
+                  <ChevronDown size={14} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </section>
   );
 }
 
-function Over25Table({ rows }: { rows: Over25Item[] }) {
-  if (rows.length === 0) return <EmptyState />;
+function StatCell({ label, value, tone }: { label: string; value: string; tone: "good" | "bad" | "muted" | "neutral" }) {
+  const cls = tone === "good" ? "text-[#35E75A]"
+    : tone === "bad" ? "text-[#E85B5B]"
+    : tone === "muted" ? "text-fg-muted"
+    : "text-fg";
+  return (
+    <div>
+      <div className="text-[9px] font-bold uppercase tracking-wider text-fg-muted">{label}</div>
+      <div className={`mt-0.5 text-sm font-black ${cls}`}>{value}</div>
+    </div>
+  );
+}
 
+// ────────────────────────────────────────────────────────────
+// Tables (unchanged from before)
+// ────────────────────────────────────────────────────────────
+function Over25Table({ rows }: { rows: Over25Row[] }) {
   return (
     <div>
       <TableHeader columns="lg:grid-cols-[120px_190px_minmax(0,1fr)_100px_110px_110px_110px]">
-        <span>Date</span>
-        <span>Ligue</span>
-        <span>Match</span>
-        <span>Sélection</span>
-        <span>Probabilité</span>
-        <span>Résultat</span>
-        <span>Statut</span>
+        <span>Date</span><span>Ligue</span><span>Match</span>
+        <span>Sélection</span><span>Probabilité</span><span>Résultat</span><span>Statut</span>
       </TableHeader>
       {rows.map((item) => (
         <TableRow key={item.id} columns="lg:grid-cols-[120px_190px_minmax(0,1fr)_100px_110px_110px_110px]">
@@ -456,59 +465,21 @@ function Over25Table({ rows }: { rows: Over25Item[] }) {
   );
 }
 
-function SmartResultTable({ rows }: { rows: SmartResultItem[] }) {
-  if (rows.length === 0) return <EmptyState />;
-
+function ResultTable({ rows, accent }: { rows: ResultRow[]; accent: string }) {
   return (
     <div>
-      <TableHeader columns="lg:grid-cols-[120px_190px_minmax(0,1fr)_100px_110px_110px_110px]">
-        <span>Date</span>
-        <span>Ligue</span>
-        <span>Match</span>
-        <span>Sélection</span>
-        <span>Confiance</span>
-        <span>Résultat</span>
-        <span>Statut</span>
+      <TableHeader columns="lg:grid-cols-[120px_190px_minmax(0,1fr)_110px_110px_110px_110px]">
+        <span>Date</span><span>Ligue</span><span>Match</span>
+        <span>Avis</span><span>Confiance</span><span>Résultat</span><span>Statut</span>
       </TableHeader>
       {rows.map((item) => (
-        <TableRow key={item.id} columns="lg:grid-cols-[120px_190px_minmax(0,1fr)_100px_110px_110px_110px]">
+        <TableRow key={item.id} columns="lg:grid-cols-[120px_190px_minmax(0,1fr)_110px_110px_110px_110px]">
           <DateCell item={item} />
           <LeagueCell item={item} />
           <MatchCell item={item} />
-          <ResultSelection item={item} />
-          <span className="text-lg font-black text-[#35E75A]">{item.confidence}%</span>
+          <ResultSelection item={item} accent={accent} />
+          <span className={`text-lg font-black ${accent}`}>{item.confidence}%</span>
           <ResultScore score={item.finalScore} label={item.resultLabel} />
-          <StatusBadge status={item.status} />
-        </TableRow>
-      ))}
-    </div>
-  );
-}
-
-function ResultOpinionTable({ rows }: { rows: ResultItem[] }) {
-  if (rows.length === 0) return <EmptyState />;
-
-  return (
-    <div>
-      <TableHeader columns="lg:grid-cols-[105px_170px_minmax(0,1fr)_90px_90px_90px_100px_96px]">
-        <span>Date</span>
-        <span>Ligue</span>
-        <span>Match</span>
-        <span>Type</span>
-        <span>Avis</span>
-        <span>Confiance</span>
-        <span>Résultat</span>
-        <span>Statut</span>
-      </TableHeader>
-      {rows.map((item) => (
-        <TableRow key={item.id} columns="lg:grid-cols-[105px_170px_minmax(0,1fr)_90px_90px_90px_100px_96px]">
-          <DateCell item={item} />
-          <LeagueCell item={item} />
-          <MatchCell item={item} />
-          <TypeBadge type={item.type} />
-          <ResultSelection item={item} compact />
-          <span className="text-lg font-black text-[#35E75A]">{item.confidence}%</span>
-          <ResultScore score={item.finalScore} label={item.resultLabel} compact />
           <StatusBadge status={item.status} />
         </TableRow>
       ))}
@@ -523,152 +494,94 @@ function TableHeader({ columns, children }: { columns: string; children: ReactNo
     </div>
   );
 }
-
 function TableRow({ columns, children }: { columns: string; children: ReactNode }) {
   return (
-    <div className={`grid min-h-[78px] min-w-0 grid-cols-1 gap-4 border-b border-white/[0.06] px-4 py-4 transition-colors last:border-b-0 hover:bg-[rgba(53,231,90,0.04)] lg:grid lg:items-center lg:gap-3 lg:py-0 ${columns}`}>
+    <div className={`grid min-h-[70px] min-w-0 grid-cols-1 gap-3 border-b border-white/[0.06] px-4 py-3 transition-colors last:border-b-0 hover:bg-white/[0.03] lg:grid lg:items-center lg:gap-3 lg:py-0 ${columns}`}>
       {children}
     </div>
   );
 }
-
-function DateCell({ item }: { item: BaseHistoryItem }) {
+function DateCell({ item }: { item: BaseRow }) {
   return (
-    <div className="min-w-0 font-medium text-[#F3F6F7]">
-      <div className="text-sm">{item.date}</div>
-      <div className="mt-1 text-sm text-[rgba(243,246,247,0.66)]">{item.time}</div>
+    <div className="min-w-0 text-[#F3F6F7]">
+      <div className="text-sm font-medium">{item.date}</div>
+      <div className="mt-0.5 text-xs text-[rgba(243,246,247,0.55)]">{item.time}</div>
     </div>
   );
 }
-
-function LeagueCell({ item }: { item: BaseHistoryItem }) {
+function LeagueCell({ item }: { item: BaseRow }) {
   return (
-    <div className="flex min-w-0 items-center gap-3">
-      <CountryFlag country={item.country} league={item.league} flag={item.flag} className="h-[15px] w-[22px]" />
+    <div className="flex min-w-0 items-center gap-2.5">
+      <CountryFlag country={item.country} league={item.league} flag={item.flag} className="h-[13px] w-[19px]" />
       <div className="min-w-0">
-        <div className="truncate text-sm font-extrabold text-[#F3F6F7]">{item.league}</div>
-        <div className="mt-1 truncate text-xs text-[rgba(243,246,247,0.48)]">{item.country}</div>
+        <div className="truncate text-sm font-bold text-[#F3F6F7]">{item.league}</div>
+        <div className="mt-0.5 truncate text-xs text-[rgba(243,246,247,0.45)]">{item.country}</div>
       </div>
     </div>
   );
 }
-
-function MatchCell({ item }: { item: BaseHistoryItem }) {
+function MatchCell({ item }: { item: BaseRow }) {
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_28px_minmax(0,1fr)] items-center gap-2">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_24px_minmax(0,1fr)] items-center gap-2">
       <TeamSide team={item.home} align="right" />
-      <span className="text-center text-xs font-bold uppercase text-[rgba(243,246,247,0.45)]">vs</span>
+      <span className="text-center text-[10px] font-bold uppercase text-fg-muted">vs</span>
       <TeamSide team={item.away} align="left" />
     </div>
   );
 }
-
 function TeamSide({ team, align }: { team: Team; align: "left" | "right" }) {
   return (
     <div className={`flex min-w-0 items-center gap-2 ${align === "right" ? "justify-end" : "justify-start"}`}>
-      {align === "right" && <span className="min-w-0 truncate text-right text-sm font-bold text-[#F3F6F7]">{team.name}</span>}
+      {align === "right" && <span className="min-w-0 truncate text-right text-sm font-bold text-fg">{team.name}</span>}
       <TeamLogo team={team} />
-      {align === "left" && <span className="min-w-0 truncate text-left text-sm font-bold text-[#F3F6F7]">{team.name}</span>}
+      {align === "left" && <span className="min-w-0 truncate text-left text-sm font-bold text-fg">{team.name}</span>}
     </div>
   );
 }
-
 function TeamLogo({ team }: { team: Team }) {
-  if (team.logo) {
-    return <img src={team.logo} alt={team.name} className="h-7 w-7 shrink-0 object-contain" />;
-  }
-
+  if (team.logo) return <img src={team.logo} alt={team.name} className="h-6 w-6 shrink-0 object-contain" />;
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.06] text-[10px] font-extrabold text-[rgba(243,246,247,0.88)]">
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.06] text-[9px] font-extrabold text-fg">
       {getTeamInitials(team.name)}
     </span>
   );
 }
-
 function SelectionBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex h-9 w-[78px] max-w-full items-center justify-center rounded-[10px] border border-[rgba(53,231,90,0.20)] bg-[rgba(53,231,90,0.09)] text-lg font-black text-[#35E75A]">
+    <span className="inline-flex h-8 w-[70px] max-w-full items-center justify-center rounded-lg border border-[rgba(53,231,90,0.20)] bg-[rgba(53,231,90,0.09)] text-base font-black text-[#35E75A]">
       {children}
     </span>
   );
 }
-
-function ResultSelection({ item, compact = false }: { item: SmartResultItem | ResultItem; compact?: boolean }) {
+function ResultSelection({ item, accent }: { item: ResultRow; accent: string }) {
   return (
-    <div className={`${compact ? "h-[52px] w-[88px]" : "h-[52px] w-[78px]"} flex max-w-full flex-col items-center justify-center rounded-[10px] border border-[rgba(53,231,90,0.20)] bg-[rgba(53,231,90,0.09)] text-center`}>
-      <div className="text-xl font-black leading-none text-[#35E75A]">{item.selection}</div>
-      <div className="mt-1 max-w-full truncate px-1 text-[11px] font-semibold text-[#DFFFE8]">{item.selectionLabel}</div>
+    <div className="flex h-[46px] w-[80px] max-w-full flex-col items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-center">
+      <div className={`text-lg font-black leading-none ${accent}`}>{item.selection}</div>
+      <div className="mt-0.5 max-w-full truncate px-1 text-[10px] font-semibold text-fg-muted">{item.selectionLabel}</div>
     </div>
   );
 }
-
-function ResultScore({ score, label, compact = false }: { score: string; label: string; compact?: boolean }) {
+function ResultScore({ score, label }: { score: string; label: string }) {
   return (
     <div className="min-w-0 text-[#F3F6F7]">
-      <div className={`${compact ? "text-base" : "text-lg"} text-center font-bold leading-none`}>{score}</div>
-      <div className="mt-1 truncate text-center text-xs text-[rgba(243,246,247,0.66)]">{label}</div>
+      <div className="text-center text-base font-bold leading-none">{score}</div>
+      <div className="mt-0.5 truncate text-center text-xs text-fg-muted">{label}</div>
     </div>
   );
 }
-
-function TypeBadge({ type }: { type: ResultItem["type"] }) {
-  const smart = type === "Smart Sim";
-  return (
-    <span
-      className={`inline-flex h-8 max-w-[88px] items-center justify-center rounded-[9px] px-2 text-[11px] font-bold ${
-        smart
-          ? "border border-[rgba(53,231,90,0.18)] bg-[rgba(53,231,90,0.09)] text-[#35E75A]"
-          : "border border-white/[0.08] bg-white/[0.055] text-[rgba(243,246,247,0.76)]"
-      }`}
-    >
-      <span className="truncate">{type}</span>
-    </span>
-  );
-}
-
 function StatusBadge({ status }: { status: Status }) {
   const config = {
-    won: {
-      label: "Gagné",
-      icon: <CheckCircle2 size={15} />,
-      className: "border-[rgba(53,231,90,0.24)] bg-[rgba(53,231,90,0.10)] text-[#35E75A]",
-    },
-    lost: {
-      label: "Perdu",
-      icon: <X size={15} />,
-      className: "border-[rgba(255,91,91,0.28)] bg-[rgba(255,91,91,0.08)] text-[#FF5E5E]",
-    },
-    pending: {
-      label: "En attente",
-      icon: <CalendarDays size={15} />,
-      className: "border-white/[0.10] bg-white/[0.045] text-[rgba(243,246,247,0.70)]",
-    },
-    void: {
-      label: "Annulé",
-      icon: <CalendarDays size={15} />,
-      className: "border-white/[0.10] bg-white/[0.045] text-[rgba(243,246,247,0.70)]",
-    },
+    won:  { label: "Gagné", icon: <CheckCircle2 size={13} />, className: "border-[rgba(53,231,90,0.24)] bg-[rgba(53,231,90,0.10)] text-[#35E75A]" },
+    lost: { label: "Perdu", icon: <X size={13} />,             className: "border-[rgba(255,91,91,0.28)] bg-[rgba(255,91,91,0.08)] text-[#FF5E5E]" },
+    pending: { label: "En attente", icon: <CalendarDays size={13} />, className: "border-white/[0.10] bg-white/[0.045] text-fg-muted" },
+    void: { label: "Annulé", icon: <CalendarDays size={13} />, className: "border-white/[0.10] bg-white/[0.045] text-fg-muted" },
   }[status];
-
   return (
-    <span className={`inline-flex h-9 w-[94px] max-w-full items-center justify-center gap-1.5 rounded-full border text-xs font-extrabold ${config.className}`}>
-      {config.icon}
-      {config.label}
+    <span className={`inline-flex h-7 w-[88px] max-w-full items-center justify-center gap-1.5 rounded-full border text-[11px] font-extrabold ${config.className}`}>
+      {config.icon}{config.label}
     </span>
   );
 }
-
-function EmptyState() {
-  return (
-    <div className="px-5 py-10 text-center">
-      <div className="text-base font-extrabold text-[#F3F6F7]">Aucun historique pour le moment</div>
-      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-[rgba(243,246,247,0.58)]">
-        Les sélections évaluées apparaîtront ici lorsque les prochains matchs seront terminés.
-      </p>
-    </div>
-  );
-}
-
 function SmartBallIcon() {
   return (
     <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(53,231,90,0.38)] bg-[radial-gradient(circle_at_35%_30%,rgba(53,231,90,0.42),rgba(53,231,90,0.12)_58%,rgba(5,12,18,0.92)_100%)]">
