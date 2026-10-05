@@ -159,7 +159,7 @@ function mapBase(item: HistoryApiItem): BaseRow {
     away: { name: item.away_team.name, logo: item.away_team.logo },
     finalScore: item.final_score || "—",
     resultLabel: item.result_label || item.goals_label || "",
-    status: item.status === "void" ? "pending" : item.status,
+    status: item.status,  // garde "void" distinct de "pending"
   };
 }
 

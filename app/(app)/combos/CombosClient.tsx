@@ -54,18 +54,26 @@ function legFromMatch(m: MatchSummary): Leg | null {
   const oddO25 = m.odds?.over_25 || 0;
   const oddBtts = m.odds?.btts || 0;
   const isValue = !!m.smart_bet?.is_value;
-  const chosen = m.smart_bet?.kelly_market as Leg["market"] | undefined;
-  if (chosen && ["over_25", "btts", "over_15"].includes(chosen)) {
+  // Backend émet "over_25"/"btts" ; on supporte aussi les anciens labels "O2.5"/"BTTS".
+  const km = (m.smart_bet?.kelly_market || "").toLowerCase();
+  const kmMap: Record<string, Leg["market"]> = {
+    "over_25": "over_25", "o2.5": "over_25", "o25": "over_25",
+    "btts":   "btts",    "l2m":  "btts",
+    "over_15": "over_15", "o1.5": "over_15",
+  };
+  const chosen = kmMap[km];
+  if (chosen) {
     const p = m.probabilities?.[chosen] ?? 0;
     const o = m.odds?.[chosen] ?? 0;
     if (p > 0 && o > 1) {
       return { match: m, market: chosen, marketLabel: MARKET_LABEL[chosen], prob: p, odd: o, isValue };
     }
   }
-  if (o25 >= 0.6 && oddO25 > 1) {
+  // Fallback uniquement pour les simples très forts (évidences)
+  if (o25 >= 0.60 && oddO25 > 1) {
     return { match: m, market: "over_25", marketLabel: MARKET_LABEL.over_25, prob: o25, odd: oddO25, isValue };
   }
-  if (btts >= 0.6 && oddBtts > 1) {
+  if (btts >= 0.60 && oddBtts > 1) {
     return { match: m, market: "btts", marketLabel: MARKET_LABEL.btts, prob: btts, odd: oddBtts, isValue };
   }
   return null;
@@ -93,10 +101,10 @@ function bestCombo(pool: Leg[], k: number, sortBy: "ev" | "prob" | "odd" = "ev")
     const odd = legs.reduce((acc, l) => acc * l.odd, 1);
     return { kind: "combo" as const, legs, prob, odd, stakePct: 0, ev: prob * odd - 1 };
   });
+  // On ne garde QUE les combos à EV positif. Aucun fallback -EV.
   const positive = combos.filter((c) => c.ev > 0);
-  const source = positive.length ? positive : combos;
-  if (!source.length) return null;
-  const sorted = source.sort((a, b) => {
+  if (!positive.length) return null;
+  const sorted = positive.sort((a, b) => {
     if (sortBy === "prob") return b.prob - a.prob;
     if (sortBy === "odd") return b.odd - a.odd;
     return b.ev - a.ev;
@@ -118,20 +126,17 @@ function pickNonOverlapping(picked: BetSlip[], candidates: BetSlip[]): BetSlip |
   return null;
 }
 
-function assignStakeShares(bets: BetSlip[]): BetSlip[] {
-  // Weight each bet by fractional Kelly (¼ Kelly). Normalize so total ≤ bankroll cap.
+function assignStakeShares(bets: BetSlip[]): BetSlip[] | null {
+  // Weight each bet by fractional Kelly (¼ Kelly).
   const weights = bets.map((b) => {
     if (b.odd <= 1) return 0;
     const rawK = (b.prob * b.odd - 1) / (b.odd - 1);
     return Math.max(0, rawK * 0.25);
   });
   const sumW = weights.reduce((a, b) => a + b, 0);
-  if (sumW <= 0) {
-    // Fallback: equal split at 3% each
-    const equal = 0.03;
-    return bets.map((b) => ({ ...b, stakePct: equal }));
-  }
-  // Cap total bankroll usage at 10% (aggressive plan) — normalise if we'd exceed it
+  // Si aucun pari n'a d'edge positif → on refuse la gestion (pas de fallback 3% × N).
+  if (sumW <= 0) return null;
+  // Cap total bankroll usage at 10% — normalise si dépassement.
   const totalCap = 0.10;
   const scale = sumW > totalCap ? totalCap / sumW : 1;
   return bets.map((b, i) => ({ ...b, stakePct: weights[i] * scale }));
@@ -158,24 +163,34 @@ function buildGestions(candidates: Leg[]): Gestion[] {
     const prevEdge = prev ? prev.prob * prev.odd - 1 : -Infinity;
     if (edge > prevEdge) byFixture.set(l.match.fixture_id, l);
   }
-  const positive = [...byFixture.values()].filter((l) => l.prob * l.odd > 1);
-  const pool = (positive.length >= 3 ? positive : [...byFixture.values()])
+  // On ne garde QUE les jambes à EV positif (p × o > 1). Aucun fallback -EV.
+  const pool = [...byFixture.values()]
+    .filter((l) => l.prob * l.odd > 1)
     .sort((a, b) => (b.prob * b.odd - 1) - (a.prob * a.odd - 1))
     .slice(0, 10);
 
-  if (pool.length < 3) return [];
+  if (pool.length < 2) return [];
 
   const gestions: Gestion[] = [];
+  type PendingGestion = {
+    id: string;
+    title: string;
+    subtitle: string;
+    bets: BetSlip[] | null;
+  };
+  const pushIfValid = (g: PendingGestion) => {
+    if (!g.bets) return;
+    gestions.push({ id: g.id, title: g.title, subtitle: g.subtitle, bets: g.bets, totalStakePct: 0, expectedReturn: 0, ev: 0 });
+  };
 
-  // ── Optique A : 3 singles diversifiés — 3 meilleures cotes indépendantes ──
-  const topSingles = pool.slice(0, 3).map(singleFromLeg);
-  if (topSingles.length === 3) {
-    gestions.push({
+  // ── Optique A : 3 singles diversifiés ──
+  if (pool.length >= 3) {
+    const topSingles = pool.slice(0, 3).map(singleFromLeg);
+    pushIfValid({
       id: "singles-top",
       title: "3 simples diversifiés",
       subtitle: "Trois paris indépendants, mise répartie via Kelly ¼ — le pilier régularité.",
       bets: assignStakeShares(topSingles),
-      totalStakePct: 0, expectedReturn: 0, ev: 0,
     });
   }
 
@@ -185,13 +200,11 @@ function buildGestions(candidates: Leg[]): Gestion[] {
     const used = new Set(combo2.legs.map((l) => l.match.fixture_id));
     const remaining = pool.filter((l) => !used.has(l.match.fixture_id));
     if (remaining.length >= 1) {
-      const single = singleFromLeg(remaining[0]);
-      gestions.push({
+      pushIfValid({
         id: "combo2-plus-single",
         title: "1 double + 1 simple",
         subtitle: "Un doublet à cote intéressante et un simple sûr à côté pour compenser le risque.",
-        bets: assignStakeShares([combo2, single]),
-        totalStakePct: 0, expectedReturn: 0, ev: 0,
+        bets: assignStakeShares([combo2, singleFromLeg(remaining[0])]),
       });
     }
   }
@@ -199,13 +212,11 @@ function buildGestions(candidates: Leg[]): Gestion[] {
   // ── Optique C : 1 combo 3 legs (concentré) ──
   const combo3 = bestCombo(pool, 3, "ev");
   if (combo3) {
-    // Wrap into a "single bet" from a betting perspective (1 slip)
-    gestions.push({
+    pushIfValid({
       id: "combo3-only",
       title: "Triple concentré",
       subtitle: "Un unique combiné à 3 jambes — meilleur ratio proba × cote.",
       bets: assignStakeShares([combo3]),
-      totalStakePct: 0, expectedReturn: 0, ev: 0,
     });
   }
 
@@ -216,12 +227,11 @@ function buildGestions(candidates: Leg[]): Gestion[] {
     const remaining = pool.filter((l) => !used.has(l.match.fixture_id));
     const safeSingles = [...remaining].sort((a, b) => b.prob - a.prob).slice(0, 2);
     if (safeSingles.length === 2) {
-      gestions.push({
+      pushIfValid({
         id: "combo4-plus-safe",
         title: "Coup dur + 2 filets",
         subtitle: "Un combiné 4 matchs à grosse cote et deux simples solides pour amortir.",
         bets: assignStakeShares([combo4, ...safeSingles.map(singleFromLeg)]),
-        totalStakePct: 0, expectedReturn: 0, ev: 0,
       });
     }
   }
@@ -233,12 +243,11 @@ function buildGestions(candidates: Leg[]): Gestion[] {
     const remaining = pool.filter((l) => !used.has(l.match.fixture_id));
     const combo2b = bestCombo(remaining, 2, "ev");
     if (combo2b) {
-      gestions.push({
+      pushIfValid({
         id: "double-double",
         title: "Deux doublets équilibrés",
         subtitle: "Deux combinés 2 matchs sans jambe commune — variance modérée.",
         bets: assignStakeShares([combo2a, combo2b]),
-        totalStakePct: 0, expectedReturn: 0, ev: 0,
       });
     }
   }
